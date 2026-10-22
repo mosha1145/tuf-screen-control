@@ -268,4 +268,11 @@ namespace winrt::ScreenControl::implementation
         page.Children().Append(MakeBehaviorCard(sleepRow));
         Content(MakeScrollable(page));
     }
+
+    void SettingsPage::OnNavigatedFrom(Microsoft::UI::Xaml::Navigation::NavigationEventArgs const&)
+    {
+        // 修复内存泄漏：子控件的事件处理器捕获了 this，形成引用环；
+        // 导航离开时断开 Content 才能释放旧页面。
+        Content(nullptr);
+    }
 }

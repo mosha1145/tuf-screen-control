@@ -5,6 +5,7 @@ namespace winrt::ScreenControl::implementation
     struct SettingsPage : SettingsPageT<SettingsPage>
     {
         SettingsPage();
+    void OnNavigatedFrom(Microsoft::UI::Xaml::Navigation::NavigationEventArgs const&);
     };
 }
 namespace winrt::ScreenControl::factory_implementation

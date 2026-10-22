@@ -266,5 +266,11 @@ namespace winrt::ScreenControl::implementation
     void DisplayPage::OnNavigatedFrom(Microsoft::UI::Xaml::Navigation::NavigationEventArgs const&)
     {
         MainWindow::Current()->DetachPageUi();
+
+        // 修复内存泄漏（每次切换约 +1MB）：
+        // C++/WinRT 是引用计数，子控件上的事件处理器捕获了 this（Page），
+        // 形成 Page -> 内容 -> 子控件 -> handler -> Page 的引用环，旧页面永不释放。
+        // 导航离开时把 Content 置空，断开 Page -> 内容 这条边，环被打破。
+        Content(nullptr);
     }
 }
