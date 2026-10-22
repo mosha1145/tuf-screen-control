@@ -114,7 +114,24 @@ static ::winrt::ScreenControl::implementation::MainWindow* s_current = nullptr;
         itemSettings.Icon(settingsIcon);
         nav.MenuItems().Append(itemSettings);
 
-        nav.Content(m_contentFrame);
+nav.Content(m_contentFrame);
+
+        // 去掉 NavigationView 内容区与导航栏交接处的圆角过渡：
+        // 加载后从 Frame 向上找到内容区那层 Border，把 CornerRadius 清零。
+        // 只影响这一处，不动全局 OverlayCornerRadius（否则弹层也会变方）。
+        nav.Loaded([this](auto&&, auto&&)
+        {
+            auto parent = Microsoft::UI::Xaml::Media::VisualTreeHelper::GetParent(m_contentFrame);
+            while (parent)
+            {
+                if (auto border = parent.try_as<Microsoft::UI::Xaml::Controls::Border>())
+                {
+                    border.CornerRadius(Microsoft::UI::Xaml::CornerRadius{ 0, 0, 0, 0 });
+                    break;
+                }
+                parent = Microsoft::UI::Xaml::Media::VisualTreeHelper::GetParent(parent);
+            }
+        });
 
         nav.SelectionChanged([this](NavigationView const&, NavigationViewSelectionChangedEventArgs const& args)
         {
@@ -462,7 +479,7 @@ static ::winrt::ScreenControl::implementation::MainWindow* s_current = nullptr;
 
         ::AppendMenuW(menu, MF_STRING, CommandOpen, L"打开");
         ::AppendMenuW(menu, MF_SEPARATOR, 0, nullptr);
-        ::AppendMenuW(menu, MF_STRING, CommandTogglePlay, paused ? L"播放：继续" : L"播放：暂停");
+        ::AppendMenuW(menu, MF_STRING, CommandTogglePlay, paused ? L"播放" : L"暂停");
         ::AppendMenuW(menu, MF_STRING, CommandStop, L"停止显示");
         ::AppendMenuW(menu, MF_SEPARATOR, 0, nullptr);
         ::AppendMenuW(menu, MF_STRING, CommandExit, L"退出");

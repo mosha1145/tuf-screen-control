@@ -28,6 +28,9 @@ namespace winrt::ScreenControl::implementation
         // 改为在开关左侧放"开/关"文字，垂直居中对齐。
         ToggleSwitch autoStart;
         autoStart.MinWidth(0);
+        // 清空默认的 On/Off 文本，只保留左侧自己画的状态文字
+        autoStart.OnContent(box_value(L""));
+        autoStart.OffContent(box_value(L""));
         autoStart.VerticalAlignment(VerticalAlignment::Center);
         autoStart.HorizontalAlignment(HorizontalAlignment::Right);
 
@@ -52,7 +55,7 @@ namespace winrt::ScreenControl::implementation
         autoStartRow.Children().Append(autoStartLabel);
 
         TextBlock autoStartStatus;
-        autoStartStatus.FontSize(12);
+        autoStartStatus.FontSize(14);
         autoStartStatus.Text(autoStart.IsOn() ? L"开" : L"关");
         autoStartStatus.VerticalAlignment(VerticalAlignment::Center);
         autoStartStatus.Margin(Thickness{ 0, 0, 12, 0 });
@@ -205,6 +208,8 @@ namespace winrt::ScreenControl::implementation
         ToggleSwitch sleepToggle;
         sleepToggle.IsOn(config.sleepMode);
         sleepToggle.MinWidth(0);
+        sleepToggle.OnContent(box_value(L""));
+        sleepToggle.OffContent(box_value(L""));
         sleepToggle.VerticalAlignment(VerticalAlignment::Center);
         sleepToggle.HorizontalAlignment(HorizontalAlignment::Right);
 
@@ -238,7 +243,7 @@ namespace winrt::ScreenControl::implementation
         sleepRow.Children().Append(sleepText);
 
         TextBlock sleepStatus;
-        sleepStatus.FontSize(12);
+        sleepStatus.FontSize(14);
         sleepStatus.Text(config.sleepMode ? L"开" : L"关");
         sleepStatus.VerticalAlignment(VerticalAlignment::Center);
         sleepStatus.Margin(Thickness{ 0, 0, 12, 0 });

@@ -25,6 +25,11 @@ namespace ScreenControl::Ui
             ScrollViewer scroller;
             scroller.VerticalScrollBarVisibility(ScrollBarVisibility::Auto);
             scroller.HorizontalScrollBarVisibility(ScrollBarVisibility::Disabled);
+            // 关键：仅设 HorizontalScrollBarVisibility 只隐藏滚动条，
+            // 内容仍按无限宽度测量，右侧控件（开关/下拉）会被挤出窗口。
+            // 必须同时禁用横向滚动模式，内容才会被约束到视口宽度。
+            scroller.HorizontalScrollMode(ScrollMode::Disabled);
+            scroller.HorizontalContentAlignment(HorizontalAlignment::Stretch);
             scroller.Content(content);
             return scroller;
         }
@@ -62,9 +67,10 @@ namespace ScreenControl::Ui
         {
             TextBlock block;
             block.Text(text);
-            block.FontSize(24);
-            block.FontWeight(Windows::UI::Text::FontWeights::SemiBold());
-            block.Margin(Thickness{ 0, 0, 0, 8 });
+            // 官方页面标题样式：TitleTextBlockStyle（28px SemiBold）
+            block.Style(Application::Current().Resources()
+                            .Lookup(box_value(L"TitleTextBlockStyle")).as<Style>());
+            block.Margin(Thickness{ 0, 0, 0, 12 });
             return block;
         }
 
@@ -127,7 +133,7 @@ namespace ScreenControl::Ui
         // 子选项缩进：与标题文字对齐（图标列 16 + 列间距 16，约 32），
         // 而不是贴着卡片左侧与图标对齐。
         Grid bodyHost;
-        bodyHost.Margin(Thickness{ 28, 0, 0, 0 });
+        bodyHost.Margin(Thickness{ 32, 0, 0, 0 });
         if (auto bodyElement = body.try_as<FrameworkElement>())
         {
             bodyElement.HorizontalAlignment(HorizontalAlignment::Stretch);
