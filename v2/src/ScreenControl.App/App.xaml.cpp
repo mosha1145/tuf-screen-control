@@ -3,6 +3,7 @@
 #include "MainWindow.h"
 
 #include "AppConfig.h"
+#include "NativeTheme.h"
 
 #include <filesystem>
 #include <fstream>
@@ -121,6 +122,11 @@ namespace winrt::ScreenControl::implementation
             ::ScreenControl::Core::ConfigStore config;
             config.Load();
             ApplyAccentResources(config.Data().themeColor);
+
+            // 深色系统菜单（标题栏右键原生菜单）：必须在创建窗口之前设置，
+            // 否则窗口创建时的菜单主题不会跟随（参考实现也放在 App 启动早期）。
+            ::ScreenControl::NativeTheme::ApplyPreferredAppMode(
+                ::ScreenControl::NativeTheme::Parse(config.Data().appTheme));
         }
         catch (...)
         {

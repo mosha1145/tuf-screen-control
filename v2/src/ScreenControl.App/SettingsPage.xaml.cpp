@@ -25,8 +25,8 @@ namespace winrt::ScreenControl::implementation
         // 开机自启动：左侧文本、右侧开关（与系统设置页的条目一致，开关不显示文字）
         ToggleSwitch autoStart;
         autoStart.MinWidth(0);
-        autoStart.OnContent(nullptr);
-        autoStart.OffContent(nullptr);
+        autoStart.OnContent(box_value(L"开"));
+        autoStart.OffContent(box_value(L"关"));
         autoStart.VerticalAlignment(VerticalAlignment::Center);
         autoStart.HorizontalAlignment(HorizontalAlignment::Right);
 
@@ -233,8 +233,8 @@ namespace winrt::ScreenControl::implementation
         ToggleSwitch powerMaster;
         powerMaster.IsOn(config.powerActions);
         powerMaster.MinWidth(0);
-        powerMaster.OnContent(nullptr);
-        powerMaster.OffContent(nullptr);
+        powerMaster.OnContent(box_value(L"开"));
+        powerMaster.OffContent(box_value(L"关"));
         powerMaster.VerticalAlignment(VerticalAlignment::Center);
         powerMaster.HorizontalAlignment(HorizontalAlignment::Right);
         Grid::SetColumn(powerMaster, 2);

@@ -157,34 +157,8 @@ static ::winrt::ScreenControl::implementation::MainWindow* s_current = nullptr;
 
         SetupBackdropAndTitleBar();
 
-        // 首次页面导航延后到窗口真正激活之后。
-        // 在构造函数里直接 nav.SelectedItem(...) 时窗口尚未显示，
-        // 页面转场会在"没有窗口"的状态下播放，实际看到的是系统窗口动画，
-        // 方向与预期相反（从右到左）。
-        Activated([this, nav, itemDisplay](auto&&, Microsoft::UI::Xaml::WindowActivatedEventArgs const&)
-        {
-            if (m_firstNavigateDone)
-            {
-                return;
-            }
-            m_firstNavigateDone = true;
-
-            // 等窗口帧真正合成后再做首次导航，避免与窗口打开动画重叠
-            auto dispatcher = DispatcherQueue();
-            if (dispatcher)
-            {
-                dispatcher.TryEnqueue([nav, itemDisplay]()
-                {
-                    ::DwmFlush();
-                    nav.SelectedItem(itemDisplay);
-                });
-            }
-            else
-            {
-                nav.SelectedItem(itemDisplay);
-            }
-        });
-
+        // 首次导航：直接选中主控项（官方标准做法，不叠加任何额外动画代码）
+        nav.SelectedItem(itemDisplay);
         // 启动时按配置恢复主题（含「跟随系统」）。
         m_theme = ::ScreenControl::NativeTheme::Parse(::ScreenControl::Ui::Config().Data().appTheme);
         ApplyTheme(m_theme, false);
