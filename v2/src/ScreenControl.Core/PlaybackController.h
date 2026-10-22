@@ -57,6 +57,7 @@ namespace ScreenControl::Core
 
         bool SetBrightness(int percent);
         bool SetScreenPower(bool on);
+        bool SetSleepMode(bool enabled);
 
         // ---------------- 播放 ----------------
         /// 播放指定素材（照片或视频自动识别）。会先停止当前播放。

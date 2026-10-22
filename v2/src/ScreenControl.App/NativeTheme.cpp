@@ -116,15 +116,10 @@ namespace ScreenControl
             return;   // 系统不支持：静默跳过
         }
 
-        int mode = kPreferredAppModeDefault;   // 跟随系统
-        if (theme == AppTheme::Dark)
-        {
-            mode = kPreferredAppModeForceDark;
-        }
-        else if (theme == AppTheme::Light)
-        {
-            mode = kPreferredAppModeForceLight;
-        }
+        // 跟随系统时必须解析出实际深浅再强制：直接传 Default 在部分环境下
+        // 不会让系统菜单跟随系统深色（表现为仍是白底）。
+        const bool dark = ResolveIsDark(theme);
+        const int mode = dark ? kPreferredAppModeForceDark : kPreferredAppModeForceLight;
         exports.SetPreferredAppMode(mode);
 
         if (exports.FlushMenuThemes != nullptr)

@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "SettingsPage.xaml.h"
 #include "UiHelpers.h"
+#include "PlaybackController.h"
 #include <winrt/Microsoft.UI.Xaml.Media.Animation.h>
 #if __has_include("SettingsPage.g.cpp")
 #include "SettingsPage.g.cpp"
@@ -22,17 +23,18 @@ namespace winrt::ScreenControl::implementation
 
         page.Children().Append(MakeTitle(L"设置"));
 
-        // 开机自启动：左侧文本、右侧开关（与系统设置页的条目一致，开关不显示文字）
+        // 开机自启动：左侧文本、右侧开关。
+        // 开关旁不再用 OnContent/OffContent（它们渲染在开关右侧），
+        // 改为在开关左侧放"开/关"文字，垂直居中对齐。
         ToggleSwitch autoStart;
         autoStart.MinWidth(0);
-        autoStart.OnContent(box_value(L"开"));
-        autoStart.OffContent(box_value(L"关"));
         autoStart.VerticalAlignment(VerticalAlignment::Center);
         autoStart.HorizontalAlignment(HorizontalAlignment::Right);
 
         Grid autoStartRow;
         autoStartRow.ColumnDefinitions().Append([] { ColumnDefinition c; c.Width(GridLengthHelper::Auto()); return c; }());
         autoStartRow.ColumnDefinitions().Append([] { ColumnDefinition c; c.Width(GridLengthHelper::FromValueAndType(1, GridUnitType::Star)); return c; }());
+        autoStartRow.ColumnDefinitions().Append([] { ColumnDefinition c; c.Width(GridLengthHelper::Auto()); return c; }());
         autoStartRow.ColumnDefinitions().Append([] { ColumnDefinition c; c.Width(GridLengthHelper::Auto()); return c; }());
 
         FontIcon autoStartIcon;
@@ -49,7 +51,23 @@ namespace winrt::ScreenControl::implementation
         Grid::SetColumn(autoStartLabel, 1);
         autoStartRow.Children().Append(autoStartLabel);
 
-        Grid::SetColumn(autoStart, 2);
+        TextBlock autoStartStatus;
+        autoStartStatus.FontSize(12);
+        autoStartStatus.Text(autoStart.IsOn() ? L"开" : L"关");
+        autoStartStatus.VerticalAlignment(VerticalAlignment::Center);
+        autoStartStatus.Margin(Thickness{ 0, 0, 12, 0 });
+        Grid::SetColumn(autoStartStatus, 2);
+        autoStartRow.Children().Append(autoStartStatus);
+
+        autoStart.Toggled([autoStartStatus](IInspectable const& sender, RoutedEventArgs const&)
+        {
+            if (auto control = sender.try_as<ToggleSwitch>())
+            {
+                autoStartStatus.Text(control.IsOn() ? L"开" : L"关");
+            }
+        });
+
+        Grid::SetColumn(autoStart, 3);
         autoStartRow.Children().Append(autoStart);
         // 关闭窗口时的行为（下拉选择，与开机自启动同一张卡）
         Grid closeRow;
@@ -181,80 +199,68 @@ namespace winrt::ScreenControl::implementation
 
         page.Children().Append(MakeSettingsCard(L"\xE790", L"主题色", colorValue, colorChoice));
 
-        // ---------------- 智能关屏（顶栏总开关 + 子项） ----------------
+// ---------------- 屏幕设置 ----------------
+        page.Children().Append(MakeSectionTitle(L"屏幕设置"));
 
-        // 子项容器：总开关关闭时整体置灰
-        StackPanel powerItemsInner;
-        powerItemsInner.Spacing(4);
+        ToggleSwitch sleepToggle;
+        sleepToggle.IsOn(config.sleepMode);
+        sleepToggle.MinWidth(0);
+        sleepToggle.VerticalAlignment(VerticalAlignment::Center);
+        sleepToggle.HorizontalAlignment(HorizontalAlignment::Right);
 
+        Grid sleepRow;
+        sleepRow.ColumnDefinitions().Append([] { ColumnDefinition c; c.Width(GridLengthHelper::Auto()); return c; }());
+        sleepRow.ColumnDefinitions().Append([] { ColumnDefinition c; c.Width(GridLengthHelper::FromValueAndType(1, GridUnitType::Star)); return c; }());
+        sleepRow.ColumnDefinitions().Append([] { ColumnDefinition c; c.Width(GridLengthHelper::Auto()); return c; }());
+        sleepRow.ColumnDefinitions().Append([] { ColumnDefinition c; c.Width(GridLengthHelper::Auto()); return c; }());
 
-        // 只有 Control 才有 IsEnabled，StackPanel 没有，所以包一层 ContentControl。
-        ContentControl powerItems;
-        powerItems.Content(powerItemsInner);
-        powerItems.HorizontalContentAlignment(HorizontalAlignment::Stretch);
+        FontIcon sleepIcon;
+        sleepIcon.Glyph(L"\xE708");
+        sleepIcon.FontSize(16);
+        sleepIcon.VerticalAlignment(VerticalAlignment::Center);
+        Grid::SetColumn(sleepIcon, 0);
+        sleepRow.Children().Append(sleepIcon);
 
-        auto makePowerItem = [&powerItemsInner](wchar_t const* title, bool initial,
-                                                std::function<void(bool)> persist)
-        {
-            CheckBox box;
-            box.IsChecked(initial);
-            box.Checked([persist](IInspectable const& sender, RoutedEventArgs const&)
-            {
-                if (auto control = sender.try_as<CheckBox>())
-                {
-                    if (auto state = control.IsChecked()) { persist(state.GetBoolean()); }
-                }
-            });
-            box.Unchecked([persist](IInspectable const& sender, RoutedEventArgs const&)
-            {
-                if (auto control = sender.try_as<CheckBox>())
-                {
-                    if (auto state = control.IsChecked()) { persist(state.GetBoolean()); }
-                }
-            });
+        StackPanel sleepText;
+        sleepText.Spacing(2);
+        sleepText.VerticalAlignment(VerticalAlignment::Center);
+        sleepText.Margin(Thickness{ 16, 0, 0, 0 });
+        TextBlock sleepTitle;
+        sleepTitle.Text(L"睡眠模式");
+        TextBlock sleepDesc;
+        sleepDesc.Text(L"无内容播放时关闭屏幕");
+        sleepDesc.FontSize(12);
+        sleepDesc.Foreground(Application::Current().Resources()
+                                 .Lookup(box_value(L"TextFillColorSecondaryBrush")).as<Brush>());
+        sleepText.Children().Append(sleepTitle);
+        sleepText.Children().Append(sleepDesc);
+        Grid::SetColumn(sleepText, 1);
+        sleepRow.Children().Append(sleepText);
 
-            // 子项只要一个名称，不再配说明小字。
-            TextBlock titleBlock;
-            titleBlock.Text(title);
-            titleBlock.TextWrapping(TextWrapping::Wrap);
-            box.Content(titleBlock);
-            powerItemsInner.Children().Append(box);
-        };
+        TextBlock sleepStatus;
+        sleepStatus.FontSize(12);
+        sleepStatus.Text(config.sleepMode ? L"开" : L"关");
+        sleepStatus.VerticalAlignment(VerticalAlignment::Center);
+        sleepStatus.Margin(Thickness{ 0, 0, 12, 0 });
+        Grid::SetColumn(sleepStatus, 2);
+        sleepRow.Children().Append(sleepStatus);
 
-        makePowerItem(L"关闭程序时", config.powerCloseApp,
-                      [this](bool value) { ::ScreenControl::Ui::Config().Data().powerCloseApp = value; ::ScreenControl::Ui::Config().Save(); });
-        makePowerItem(L"关闭电脑时", config.powerShutdown,
-                      [this](bool value) { ::ScreenControl::Ui::Config().Data().powerShutdown = value; ::ScreenControl::Ui::Config().Save(); });
-        makePowerItem(L"睡眠时", config.powerSleep,
-                      [this](bool value) { ::ScreenControl::Ui::Config().Data().powerSleep = value; ::ScreenControl::Ui::Config().Save(); });
-        makePowerItem(L"注销时", config.powerLogout,
-                      [this](bool value) { ::ScreenControl::Ui::Config().Data().powerLogout = value; ::ScreenControl::Ui::Config().Save(); });
-
-        ToggleSwitch powerMaster;
-        powerMaster.IsOn(config.powerActions);
-        powerMaster.MinWidth(0);
-        powerMaster.OnContent(box_value(L"开"));
-        powerMaster.OffContent(box_value(L"关"));
-        powerMaster.VerticalAlignment(VerticalAlignment::Center);
-        powerMaster.HorizontalAlignment(HorizontalAlignment::Right);
-        Grid::SetColumn(powerMaster, 2);
-
-        // 总开关关闭时子项灰显（与系统设置页一致）
-        powerItems.IsEnabled(config.powerActions);
-        powerMaster.Toggled([this, powerItems](IInspectable const& sender, RoutedEventArgs const&)
+        sleepToggle.Toggled([sleepStatus](IInspectable const& sender, RoutedEventArgs const&)
         {
             if (auto control = sender.try_as<ToggleSwitch>())
             {
-                ::ScreenControl::Ui::Config().Data().powerActions = control.IsOn();
+                const bool on = control.IsOn();
+                ::ScreenControl::Ui::Config().Data().sleepMode = on;
                 ::ScreenControl::Ui::Config().Save();
-                powerItems.IsEnabled(control.IsOn());
+                sleepStatus.Text(on ? L"开" : L"关");
+                MainWindow::Current()->Player().SetSleepMode(on);
             }
         });
 
-        // 注意：powerHeader 与 powerItems 只能各有一个父节点。
-        // 之前先把它们塞进 powerSection，随后又设为 Expander 的 Header/Content，
-        // 同一个 UIElement 被挂到两处 -> XAML 抛 E_INVALIDARG（"参数错误"）导致闪退。
-        page.Children().Append(MakeSettingsCard(L"\xE7E8", L"智能关屏", powerMaster, powerItems));
+        Grid::SetColumn(sleepToggle, 3);
+        sleepRow.Children().Append(sleepToggle);
+
+        page.Children().Append(MakeBehaviorCard(sleepRow));
         Content(MakeScrollable(page));
     }
 }

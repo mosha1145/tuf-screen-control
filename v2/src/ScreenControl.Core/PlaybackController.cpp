@@ -85,6 +85,18 @@ namespace ScreenControl::Core
         return m_device.SetScreen(on);
     }
 
+    bool PlaybackController::SetSleepMode(bool enabled)
+    {
+        if (!EnsureDevice(m_device))
+        {
+            return false;
+        }
+
+        // 0x8000011F：0 = 开启睡眠模式，1 = 关闭睡眠模式。
+        return m_device.SetSleepMode(enabled);
+    }
+
+
     // ==================== 参数 ====================
 
     void PlaybackController::SetParams(Imaging::RenderParams const& params)

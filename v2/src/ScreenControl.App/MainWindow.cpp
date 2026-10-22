@@ -207,6 +207,9 @@ static ::winrt::ScreenControl::implementation::MainWindow* s_current = nullptr;
         // 不需要再手动点两次开关。
         Player().SetBrightness(config.brightness);
         Player().SetScreenPower(config.screenOn);
+
+        // 睡眠模式：0x8000011F（0 = 开启，1 = 关闭）
+        Player().SetSleepMode(config.sleepMode);
     }
 
 
@@ -403,11 +406,6 @@ static ::winrt::ScreenControl::implementation::MainWindow* s_current = nullptr;
 
         if (m_player)
         {
-            auto const& config = ::ScreenControl::Ui::Config().Data();
-            if (config.powerActions && config.powerCloseApp)
-            {
-                m_player->SetScreenPower(false);
-            }
             m_player->RequestStop();    // 不 join，避免卡住
         }
 
@@ -515,53 +513,8 @@ static ::winrt::ScreenControl::implementation::MainWindow* s_current = nullptr;
             return;
         }
 
-        // 统一的关屏动作：受设置页「电源联动」总开关与各事件独立开关控制。
-        auto turnOffScreen = [this]()
-        {
-            if (m_player)
-            {
-                m_player->SetScreenPower(false);
-            }
-        };
-
+        // 只保留单实例激活消息；「智能关屏」电源联动已整体移除。
         ::ScreenControl::PowerMonitor::Handlers handlers;
-
-        handlers.suspend = [this, turnOffScreen]()
-        {
-            auto const& cfg = ::ScreenControl::Ui::Config().Data();
-            if (cfg.powerActions && cfg.powerSleep)
-            {
-                turnOffScreen();
-            }
-        };
-
-        handlers.shutdown = [this, turnOffScreen]()
-        {
-            auto const& cfg = ::ScreenControl::Ui::Config().Data();
-            if (cfg.powerActions && cfg.powerShutdown)
-            {
-                turnOffScreen();
-            }
-        };
-
-        handlers.resume = [this]()
-        {
-            // 唤醒后按用户设定恢复：上次是开就点亮，上次是关就保持关闭。
-            // 睡眠时可能已被关屏，这里重新下发开屏命令。
-            if (m_player)
-            {
-                m_player->SetScreenPower(::ScreenControl::Ui::Config().Data().screenOn);
-            }
-        };
-
-        handlers.logoff = [this, turnOffScreen]()
-        {
-            auto const& cfg = ::ScreenControl::Ui::Config().Data();
-            if (cfg.powerActions && cfg.powerLogout)
-            {
-                turnOffScreen();
-            }
-        };
 
         // 第二个实例启动时会广播这条消息，这里把窗口叫回来
         handlers.activateMessage = ::ScreenControl::SingleInstance::ActivateMessageId();
@@ -569,15 +522,8 @@ static ::winrt::ScreenControl::implementation::MainWindow* s_current = nullptr;
 
         m_powerMonitor.Start(hwnd, handlers);
 
-        // 关闭程序时关屏（对应 v1 的 power_close_app）
-        Closed([this, turnOffScreen](auto&&, auto&&)
+        Closed([this](auto&&, auto&&)
         {
-            auto const& cfg = ::ScreenControl::Ui::Config().Data();
-            if (cfg.powerActions && cfg.powerCloseApp)
-            {
-                turnOffScreen();
-            }
-
             m_powerMonitor.Stop();
 
             // 关键：不要在这里做「优雅关闭」。

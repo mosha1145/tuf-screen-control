@@ -56,6 +56,9 @@ namespace ScreenControl::Device
         /// 屏幕开关：true=开(0x00)，false=关(0x01)。
         bool SetScreen(bool on) noexcept;
 
+        /// 睡眠模式：0x00 = 开启（无内容播放时关屏），0x01 = 关闭。
+        bool SetSleepMode(bool enabled) noexcept;
+
         // ---------------- 图像帧 ----------------
         /// 发送一帧 JPEG（分块 + 逐块重试）。
         /// 调用方保证 jpeg 是 320x320、BGR 直接编码、无通道交换。

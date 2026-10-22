@@ -28,6 +28,7 @@ namespace ScreenControl::Device
     /// 控制命令 ID。
     inline constexpr std::uint32_t kCmdBrightness = 0x80000112;
     inline constexpr std::uint32_t kCmdScreenOnOff = 0x80000110;
+inline constexpr std::uint32_t kCmdSleepMode = 0x8000011F;   // 0=开启 1=关闭
 
     /// 控制报文长度（含 1 字节报告 ID）。
     inline constexpr std::size_t kControlReportBytes = 441;

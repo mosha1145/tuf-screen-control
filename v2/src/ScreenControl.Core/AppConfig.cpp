@@ -335,6 +335,7 @@ namespace ScreenControl::Core
         m_config.powerShutdown = root[L"power_shutdown"].AsBool(m_config.powerShutdown);
         m_config.powerLogout = root[L"power_logout"].AsBool(m_config.powerLogout);
         m_config.powerSleep = root[L"power_sleep"].AsBool(m_config.powerSleep);
+        m_config.sleepMode = root[L"sleep_mode"].AsBool(m_config.sleepMode);
 
         // v1 曾有过 overlay_type == "hwinfo"（硬件信息叠加，已移除），归一到 none。
         std::wstring overlay = ToLower(root[L"overlay_type"].AsString(m_config.overlayType));
@@ -387,6 +388,7 @@ namespace ScreenControl::Core
         out << "  \"power_shutdown\": " << (m_config.powerShutdown ? "true" : "false") << ",\n";
         out << "  \"power_logout\": " << (m_config.powerLogout ? "true" : "false") << ",\n";
         out << "  \"power_sleep\": " << (m_config.powerSleep ? "true" : "false") << ",\n";
+    out << "  \"sleep_mode\": " << (m_config.sleepMode ? "true" : "false") << ",\n";
         out << "  \"overlay_type\": \"" << JsonEscape(NarrowUtf8(m_config.overlayType)) << "\",\n";
         out << "  \"clock_style\": \"" << JsonEscape(NarrowUtf8(m_config.clockStyle)) << "\",\n";
         out << "  \"smtc_filter_mode\": \"" << JsonEscape(NarrowUtf8(m_config.smtcFilterMode)) << "\",\n";

@@ -284,6 +284,12 @@ namespace ScreenControl::Device
         return SendControl(kCmdScreenOnOff, on ? 0x00 : 0x01);
     }
 
+    bool ScreenController::SetSleepMode(bool enabled) noexcept
+    {
+        // 0x8000011F：0 = 开启睡眠模式，1 = 关闭睡眠模式
+        return SendControl(kCmdSleepMode, enabled ? 0x00 : 0x01);
+    }
+
     SendStatus ScreenController::SendFrame(std::span<const std::uint8_t> jpeg,
                                            unsigned blockDelayUs) noexcept
     {
