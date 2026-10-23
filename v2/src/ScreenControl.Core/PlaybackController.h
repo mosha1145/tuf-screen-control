@@ -105,6 +105,8 @@ namespace ScreenControl::Core
         std::vector<std::uint8_t> m_lastJpeg;
         std::atomic<bool> m_paused{ false };
         std::atomic<bool> m_photoDirty{ true };
+        // 屏幕开关：关屏期间帧泵跳过设备发送，但预览回调继续
+        std::atomic<bool> m_screenOn{ true };
 
         std::thread m_worker;
         std::atomic<bool> m_running{ false };

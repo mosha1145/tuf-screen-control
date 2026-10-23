@@ -235,8 +235,10 @@ namespace winrt::ScreenControl::implementation
         TextBlock sleepDesc;
         sleepDesc.Text(L"无内容播放时关闭屏幕");
         sleepDesc.FontSize(12);
-        sleepDesc.Foreground(Application::Current().Resources()
-                                 .Lookup(box_value(L"TextFillColorSecondaryBrush")).as<Brush>());
+        // 不取 Application 资源里的 SecondaryBrush：那是按"应用主题"解析的，
+        // 页面实际主题与它不一致（跟随系统）时，浅色下会取到错误的颜色。
+        // 改用半透明默认前景，自动跟随元素自身主题。
+        sleepDesc.Opacity(0.6);
         sleepText.Children().Append(sleepTitle);
         sleepText.Children().Append(sleepDesc);
         Grid::SetColumn(sleepText, 1);

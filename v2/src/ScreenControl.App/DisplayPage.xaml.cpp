@@ -59,8 +59,13 @@ namespace winrt::ScreenControl::implementation
         m_previewImage.Height(320);
         m_previewPlaceholder = previewText;
 
+        // 再包一层圆角 8 的 Border 夹住画面，保证 Image 也被裁剪成 8px 圆角
+        Border imageClip;
+        imageClip.CornerRadius(Microsoft::UI::Xaml::CornerRadius{ 8, 8, 8, 8 });
+        imageClip.Child(m_previewImage);
+
         Grid previewInner;
-        previewInner.Children().Append(m_previewImage);
+        previewInner.Children().Append(imageClip);
         previewInner.Children().Append(previewText);
         // Border 设置 CornerRadius 后会裁剪子内容，画面圆角自然与外框一致。
         preview.Child(previewInner);

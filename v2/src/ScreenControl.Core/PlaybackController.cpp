@@ -75,6 +75,10 @@ namespace ScreenControl::Core
 
     bool PlaybackController::SetScreenPower(bool on)
     {
+        // 先更新标志：关屏期间帧泵不再向设备发送帧（省 HID 带宽/CPU），
+        // 但预览回调照常执行，预览画面仍然正常播放。
+        m_screenOn.store(on);
+
         if (!EnsureDevice(m_device))
         {
             return false;
@@ -286,7 +290,7 @@ namespace ScreenControl::Core
 
             if (m_paused.load())
             {
-                if (m_device.IsOpen() && !m_lastJpeg.empty())
+                if (m_screenOn.load() && m_device.IsOpen() && !m_lastJpeg.empty())
                 {
                     m_device.SendFrame(m_lastJpeg, 0);
                 }
@@ -305,8 +309,8 @@ namespace ScreenControl::Core
                 preview(canvas.Data(), canvas.Size(), canvas.Size(), canvas.Stride());
             }
 
-            // 发送到设备
-            if (m_device.IsOpen())
+            // 发送到设备（关屏时跳过，预览已在上面更新）
+            if (m_screenOn.load() && m_device.IsOpen())
             {
                 const auto status = m_device.SendFrame(jpeg, 0);
                 if (status == ::ScreenControl::Device::SendStatus::Ok)
