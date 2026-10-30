@@ -76,7 +76,7 @@ static ::winrt::ScreenControl::implementation::MainWindow* s_current = nullptr;
         titleContent.Children().Append(icon);
 
         TextBlock title;
-        title.Text(L"ASUS AIO Screen Control");
+        title.Text(L"TUF Screen Control");
         title.FontSize(13);
         title.VerticalAlignment(VerticalAlignment::Center);
         titleContent.Children().Append(title);
@@ -152,7 +152,7 @@ nav.Content(m_contentFrame);
         root.Children().Append(m_titleBar);
         root.Children().Append(nav);
 
-        Title(L"ASUS AIO Screen Control");
+        Title(L"TUF Screen Control");
 
         SetupBackdropAndTitleBar();
 
@@ -259,7 +259,7 @@ nav.Content(m_contentFrame);
             });
         }
 
-        m_trayAvailable = m_trayIcon.Add(GetHwnd(), L"ASUS AIO Screen Control",
+        m_trayAvailable = m_trayIcon.Add(GetHwnd(), L"TUF Screen Control",
                                          [this]() { ShowFromTray(); },
                                          [this]() { ShowTrayMenu(); });
     }

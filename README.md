@@ -1,8 +1,8 @@
-﻿# ASUS AIO Screen Control
+# TUF Screen Control
 
 > 面向华硕 ASUS InfoHub LCD 一体式水冷散热器的第三方开源屏幕控制工具。
 
-ASUS AIO Screen Control 通过 USB HID 与设备直接通信，不依赖官方后台服务，
+TUF Screen Control 通过 USB HID 与设备直接通信，不依赖官方后台服务，
 为水冷屏幕提供视频与图片播放、亮度与显示方向控制、自定义文本与时钟叠加等能力。
 项目目标是提供一个轻量、稳定、界面现代的控制工具，作为官方 InfoHub 的替代方案。
 
@@ -107,7 +107,7 @@ python tuf_gui.py
     v2\src\ScreenControl.App\ScreenControl.App.vcxproj /p:Configuration=Debug /p:Platform=x64
 ```
 
-输出：`v2\out\x64\Debug\AsusAioScreenControl.exe`
+输出：`v2\out\x64\Debug\TufScreenControl.exe`
 
 > **移动工作区后首次构建**：请先删除 `v2\out\obj`，否则中间产物里缓存的旧路径
 > 会导致 `RC2135: file not found ... .exe.embed.manifest`。

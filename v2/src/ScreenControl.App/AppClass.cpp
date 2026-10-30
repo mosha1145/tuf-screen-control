@@ -15,7 +15,7 @@ namespace ScreenControl
     namespace
     {
         /// 骨架阶段的启动诊断日志。
-        /// 写到 exe 同目录的 AsusAioScreenControl.log。
+        /// 写到 exe 同目录的 TufScreenControl.log。
         /// 存在的意义：WinUI 启动失败时若无 unhandled exception 处理器，
         /// 进程会「静默退出」且事件日志里什么都没有；有了这个日志才能定位到哪一步断掉。
         void LogStep(char const* step)
@@ -24,8 +24,8 @@ namespace ScreenControl
             GetModuleFileNameW(nullptr, exePath, MAX_PATH);
             std::wstring path{ exePath };
             const auto slash = path.find_last_of(L'\\');
-            path = (slash == std::wstring::npos) ? L"AsusAioScreenControl.log"
-                                                 : path.substr(0, slash + 1) + L"AsusAioScreenControl.log";
+            path = (slash == std::wstring::npos) ? L"TufScreenControl.log"
+                                                 : path.substr(0, slash + 1) + L"TufScreenControl.log";
 
             std::wstring line;
             const char* s = step;
@@ -165,7 +165,7 @@ int __stdcall wWinMain(HINSTANCE, HINSTANCE, PWSTR, int)
     {
         std::wstring msg = L"Application::Start failed: ";
         msg += e.message().c_str();
-        MessageBoxW(nullptr, msg.c_str(), L"ASUS AIO Screen Control", MB_OK | MB_ICONERROR);
+        MessageBoxW(nullptr, msg.c_str(), L"TUF Screen Control", MB_OK | MB_ICONERROR);
         return 1;
     }
     return 0;

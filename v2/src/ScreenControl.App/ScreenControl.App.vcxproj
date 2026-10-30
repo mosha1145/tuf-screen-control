@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <!--
   ScreenControl.App — WinUI 3 应用（非打包，C++/WinRT）
 
@@ -24,7 +24,7 @@
     <ProjectGuid>{9B5D7F44-3A64-4C85-CEAD-4F3A5B6C7D84}</ProjectGuid>
     <ProjectName>ScreenControl.App</ProjectName>
     <RootNamespace>ScreenControl</RootNamespace>
-    <TargetName>AsusAioScreenControl</TargetName>
+    <TargetName>TufScreenControl</TargetName>
     <DefaultLanguage>zh-CN</DefaultLanguage>
     <MinimumVisualStudioVersion>16.0</MinimumVisualStudioVersion>
     <AppContainerApplication>false</AppContainerApplication>

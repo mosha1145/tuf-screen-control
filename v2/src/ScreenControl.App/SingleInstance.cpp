@@ -8,7 +8,7 @@ namespace ScreenControl
 {
     namespace
     {
-        constexpr wchar_t kActivateMessageName[] = L"AsusAioScreenControl.Activate.v1";
+        constexpr wchar_t kActivateMessageName[] = L"TufScreenControl.Activate.v1";
     }
 
     UINT SingleInstance::ActivateMessageId() noexcept
@@ -51,7 +51,7 @@ namespace ScreenControl
         // 广播只会送达顶层窗口，且某些情况下会被过滤；
         // 这里再直接按窗口标题定位主窗口投递一次，可靠得多
         // （窗口隐藏时依然是顶层窗口，照样能收到）。
-        HWND hwnd = ::FindWindowW(nullptr, L"ASUS AIO Screen Control");
+        HWND hwnd = ::FindWindowW(nullptr, L"TUF Screen Control");
         if (hwnd != nullptr)
         {
             ::PostMessageW(hwnd, message, 0, 0);

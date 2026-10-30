@@ -64,9 +64,25 @@ namespace winrt::ScreenControl::implementation
         imageClip.CornerRadius(Microsoft::UI::Xaml::CornerRadius{ 8, 8, 8, 8 });
         imageClip.Child(m_previewImage);
 
+        // 设备状态徽标：叠在预览框左上角
+        Border deviceBadge;
+        deviceBadge.CornerRadius(Microsoft::UI::Xaml::CornerRadius{ 4, 4, 4, 4 });
+        deviceBadge.Background(SolidColorBrush{ Windows::UI::ColorHelper::FromArgb(0x99, 0x00, 0x00, 0x00) });
+        deviceBadge.Padding(Thickness{ 8, 4, 8, 4 });
+        deviceBadge.Margin(Thickness{ 8, 8, 0, 0 });
+        deviceBadge.HorizontalAlignment(HorizontalAlignment::Left);
+        deviceBadge.VerticalAlignment(VerticalAlignment::Top);
+
+        m_deviceText = TextBlock{};
+        m_deviceText.FontSize(12);
+        m_deviceText.Text(MainWindow::Current()->Player().DeviceReady() ? L"设备：已连接" : L"设备：未连接");
+        m_deviceText.Foreground(SolidColorBrush{ Windows::UI::Colors::White() });
+        deviceBadge.Child(m_deviceText);
+
         Grid previewInner;
         previewInner.Children().Append(imageClip);
         previewInner.Children().Append(previewText);
+        previewInner.Children().Append(deviceBadge);
         // Border 设置 CornerRadius 后会裁剪子内容，画面圆角自然与外框一致。
         preview.Child(previewInner);
         Grid::SetColumn(preview, 0);
@@ -186,9 +202,7 @@ namespace winrt::ScreenControl::implementation
         StackPanel media;
         media.Spacing(10);
 
-        m_deviceText = TextBlock{};
-        m_deviceText.Text(MainWindow::Current()->Player().DeviceReady() ? L"设备：已连接" : L"设备：未连接（若官方 InfoHub 正在运行，请先退出它——它会独占 HID 接口）");
-        media.Children().Append(m_deviceText);
+        
 
         m_statusText = TextBlock{};
         m_statusText.Text(L"未在显示");
