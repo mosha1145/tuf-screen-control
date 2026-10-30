@@ -28,7 +28,7 @@ namespace ScreenControl::Core
         const bool opened = m_device.Open();
         if (!opened)
         {
-            Notify(L"未找到水冷屏设备（VID_0B05 / PID_1C7B）。请确认设备已连接，并关闭官方 InfoHub。");
+            Notify(L"未找到水冷屏设备（VID_0B05 / PID_1C7B）。请确认设备已连接。");
         }
         return opened;
     }
@@ -50,7 +50,7 @@ namespace ScreenControl::Core
 
     namespace
     {
-        /// 按需打开设备：控件操作时若设备尚未打开（例如启动时 InfoHub 占用，
+        /// 按需打开设备：控件操作时若设备尚未打开（例如启动时打开失败，
         /// 之后用户退出了它），这里再试一次，避免"控件没反应"。
         bool EnsureDevice(::ScreenControl::Device::ScreenController& device)
         {
@@ -163,12 +163,12 @@ namespace ScreenControl::Core
             return false;
         }
 
-        // 播放前再试一次打开设备：用户可能刚关掉官方 InfoHub（它会独占 HID 接口）。
+        // 播放前再试一次打开设备（之前可能连接失败）。
         if (!m_device.IsOpen())
         {
             if (!m_device.Open())
             {
-                Notify(L"无法打开水冷屏设备：请关闭官方 InfoHub 后重试（该软件会独占 HID 接口）。");
+                Notify(L"无法打开水冷屏设备，请确认设备已连接。");
                 return false;
             }
         }
