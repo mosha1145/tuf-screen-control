@@ -1,4 +1,4 @@
-# ASUS AIO Screen Control
+﻿# ASUS AIO Screen Control
 
 > 面向华硕 ASUS InfoHub LCD 一体式水冷散热器的第三方开源屏幕控制工具。
 
@@ -12,26 +12,13 @@ ASUS AIO Screen Control 通过 USB HID 与设备直接通信，不依赖官方�
 
 ## 适配状态
 
-> 说明：不同型号随附的 InfoHub 软件版本不同，协议存在差异。以下分类依据官方
-> 「驱动程序和工具软件」页提供的 InfoHub 软件版本划分。
+本项目**仅支持**下面这一款设备，其他型号未经实机验证，不在支持范围内。
 
-### 已实测支持
+| 型号 | InfoHub 软件版本 | 状态 |
+|---|---|---|
+| **TUF Gaming LC III 360 ARGB LCD** | v1.0.0.15 | 已实测支持 |
 
-| 型号 | InfoHub 软件版本 |
-|---|---|
-| **TUF Gaming LC III 360 ARGB LCD** | v1.0.0.15 |
-
-### 同协议待适配
-
-以下型号的官方 InfoHub 安装包已完成分析，协议与 TUF LC III 高度一致，
-将在后续版本中逐步实机验证：
-
-| 型号 | InfoHub 软件版本 |
-|---|---|
-| ROG STRIX 吹雪 360 LCD 方屏版 | v1.0.7 |
-| ROG STRIX RO 姬 360 ARGB LCD | v1.0.8 |
-| Prime LC / SLC II 360 ARGB LCD | v1.0.7 |
-| AYW Gaming LC 360 ARGB LCD | v1.0.6 |
+> 设备标识：USB HID，`VID 0x0B05` / `PID 0x1C7B`。
 
 > **设备约束**：屏幕原生分辨率固定为 **320 × 320**，设备只接受这一尺寸的画面，
 > 且不保留最后一帧（需持续发送才能维持显示）。
@@ -107,8 +94,26 @@ python tuf_gui.py
 | `tuf_direct.py` | 纯 JPEG 直发验证脚本（协议探针，非应用组成部分） |
 | `PROTOCOL_REVERSE_REPORT.md` | HID 协议逆向报告（数据包格式、命令、通信机制） |
 | `project_understanding_v2.md` | v2 架构理解与重构规划 |
-| `v2/` | v2（C++ / WinUI 3）工程源码与解决方案 |
-| `v2-vs/` | v2 界面层的 Visual Studio 工程（WinUI 3 官方模板形态） |
+| `v2/` | v2（C++ / WinUI 3）工程源码与 MSBuild 解决方案 |
+
+---
+
+## 构建（v2）
+
+命令行直接构建（无需打开 Visual Studio 解决方案）：
+
+```bat
+"C:\Program Files\Microsoft Visual Studio\2022\Community\MSBuild\Current\Bin\MSBuild.exe" ^
+    v2\src\ScreenControl.App\ScreenControl.App.vcxproj /p:Configuration=Debug /p:Platform=x64
+```
+
+输出：`v2\out\x64\Debug\AsusAioScreenControl.exe`
+
+> **移动工作区后首次构建**：请先删除 `v2\out\obj`，否则中间产物里缓存的旧路径
+> 会导致 `RC2135: file not found ... .exe.embed.manifest`。
+>
+> 生成目录约定：C++/WinRT 头文件与 XAML 生成代码统一落在 `v2\out\generated\`，
+> 编译中间文件在 `v2\out\obj\`，均已被 `.gitignore` 忽略。
 
 ---
 

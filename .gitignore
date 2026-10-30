@@ -1,4 +1,4 @@
-# Python 编译缓存
+﻿# Python 编译缓存
 __pycache__/
 *.pyc
 
@@ -18,4 +18,8 @@ assets/videos/
 # 系统文件
 Thumbs.db
 Desktop.ini
-
+# 构建中间产物 / cppwinrt 生成头
+Generated Files/
+v2/out/
+.vs/
+*.user

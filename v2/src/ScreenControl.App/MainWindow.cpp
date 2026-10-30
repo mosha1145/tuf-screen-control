@@ -53,9 +53,7 @@ static ::winrt::ScreenControl::implementation::MainWindow* s_current = nullptr;
         // 从 MainWindow.xaml 加载根容器（RootGrid）并注册窗口类型。
         InitializeComponent();
 
-        // 重要：m_titleBar / m_contentFrame 在头文件里初始化为 nullptr，
-        // 必须在这里先实例化，否则后续对它们调用任何成员都会导致
-        // 空引用访问冲突（0xC0000005）——这正是之前的启动崩溃原因。
+        // m_titleBar / m_contentFrame 在头文件中初始化为 nullptr，必须在此先实例化。
         s_current = this;
 
         m_titleBar = Grid{};
@@ -147,9 +145,8 @@ nav.Content(m_contentFrame);
             m_contentFrame.BackStack().Clear();
         });
 
-        // 布局：标题栏独占第 0 行，NavigationView 只占第 1 行。
-        // 早前让 NavigationView 跨第 0~1 行，导致折叠面板的汉堡按钮/面板与
-        // 自定义标题栏区域重叠，折叠后显示错乱。分开后互不干扰。
+        // 布局：标题栏独占第 0 行，NavigationView 只占第 1 行，
+        // 避免折叠时的汉堡面板与自定义标题栏区域重叠。
         Grid::SetRow(m_titleBar, 0);
         Grid::SetRow(nav, 1);
         root.Children().Append(m_titleBar);

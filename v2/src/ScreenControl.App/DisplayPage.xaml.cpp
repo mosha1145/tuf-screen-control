@@ -215,9 +215,7 @@ namespace winrt::ScreenControl::implementation
         playPhoto.Content(box_value(L"播放选中的照片"));
         playPhoto.Click([this, photoList](auto const&, RoutedEventArgs const&)
         {
-            // SelectedItem() 返回的是 ListViewItem 本身，不是 hstring。
-            // 之前直接 unbox_value<hstring>(item) 类型不匹配抛异常 -> 崩溃。
-            // 路径存在 Tag 里，所以先转成 ListViewItem 再取 Tag。
+            // SelectedItem() 返回 ListViewItem 本身而非 hstring，路径存在 Tag 里。
             if (auto item = photoList.SelectedItem().try_as<ListViewItem>())
             {
                 const std::wstring path = unbox_value<hstring>(item.Tag()).c_str();

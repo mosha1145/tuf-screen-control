@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <!--
   ScreenControl.App — WinUI 3 应用（非打包，C++/WinRT）
 
@@ -87,7 +87,7 @@
       #include <winrt/Microsoft.UI.Xaml.h>，因此要把这一层目录本身（以及它的父目录）
       都放进包含路径。
     -->
-    <IncludePath>$(MSBuildThisFileDirectory)Generated Files\winrt;$(MSBuildThisFileDirectory)Generated Files;$(MSBuildThisFileDirectory);$(IntDir);$(MSBuildThisFileDirectory)..\ScreenControl.Core;$(MSBuildThisFileDirectory)..\ScreenControl.Device;$(MSBuildThisFileDirectory)..\ScreenControl.Imaging;$(IncludePath)</IncludePath>
+    <IncludePath>$(GeneratedFilesDir)winrt;$(GeneratedFilesDir);$(MSBuildThisFileDirectory);$(IntDir);$(MSBuildThisFileDirectory)..\ScreenControl.Core;$(MSBuildThisFileDirectory)..\ScreenControl.Device;$(MSBuildThisFileDirectory)..\ScreenControl.Imaging;$(IncludePath)</IncludePath>
     <IntDir Condition="'$(Platform)'!='' and '$(Configuration)'!=''">$(MSBuildThisFileDirectory)..\..\out\obj\$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
     <OutDir Condition="'$(Platform)'!='' and '$(Configuration)'!=''" >$(MSBuildThisFileDirectory)..\..\out\$(Platform)\$(Configuration)\</OutDir>
   </PropertyGroup>

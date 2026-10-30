@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <!--
   v2 共享构建属性
   =====================================================================
@@ -34,6 +34,9 @@
 
     <!-- 统一输出目录：v2\out\<Platform>\<Configuration>\ -->
     <OutDir>$(MSBuildThisFileDirectory)out\$(Platform)\$(Configuration)\</OutDir>
+    <!-- cppwinrt 的 Generated Files 目录：不设会回退到 RootNamespace，
+         生成到仓库根目录（历史问题）。统一收进 v2\out\generated\。 -->
+    <GeneratedFilesDir>$(MSBuildThisFileDirectory)out\generated\</GeneratedFilesDir>
     <IntDir>$(MSBuildThisFileDirectory)out\obj\$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
 
     <!-- 原生桌面工程口径（见文件头说明） -->
