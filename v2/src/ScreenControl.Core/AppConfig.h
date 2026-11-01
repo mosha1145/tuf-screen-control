@@ -69,6 +69,13 @@ namespace ScreenControl::Core
         /// 睡眠模式：开启后无内容播放时关闭屏幕（命令 0x8000011F = 0）。
         bool sleepMode = true;
 
+        /// 自动检测固件更新。
+        bool autoCheckUpdate = true;
+        /// 检查频率：startup / daily / weekly / monthly / halfyear。
+        std::wstring updateFrequency = L"startup";
+        /// 上次检查时间（Unix 秒，0 表示从未检查）。
+        long long lastUpdateCheckUnix = 0;
+
         // ---- 覆盖层 ----
         std::wstring overlayType = L"none";  ///< none / clock / custom（旧值 hwinfo 归一为 none）
         std::wstring clockStyle = L"text";   ///< text / analog

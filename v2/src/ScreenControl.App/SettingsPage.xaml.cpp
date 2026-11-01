@@ -2,6 +2,9 @@
 #include "SettingsPage.xaml.h"
 #include "UiHelpers.h"
 #include "PlaybackController.h"
+#include "ScreenController.h"
+#include "FirmwareUpdater.h"
+#include <thread>
 #include <winrt/Microsoft.UI.Xaml.Media.Animation.h>
 #if __has_include("SettingsPage.g.cpp")
 #include "SettingsPage.g.cpp"
@@ -268,6 +271,206 @@ namespace winrt::ScreenControl::implementation
         sleepRow.Children().Append(sleepToggle);
 
         page.Children().Append(MakeBehaviorCard(sleepRow));
+
+        // ---------------- 自动检测更新 ----------------
+        page.Children().Append(MakeSectionTitle(L"更新"));
+
+        // 当前固件版本来自设备的 USB 实例 ID（REV_xxxx）
+        std::wstring firmware = ::ScreenControl::Device::ScreenController::FirmwareRevision();
+        if (firmware.empty())
+        {
+            firmware = L"未知";
+        }
+
+        ToggleSwitch updateToggle;
+        updateToggle.IsOn(config.autoCheckUpdate);
+        updateToggle.OnContent(box_value(L""));
+        updateToggle.OffContent(box_value(L""));
+        updateToggle.MinWidth(0);
+        updateToggle.VerticalAlignment(VerticalAlignment::Center);
+        updateToggle.HorizontalAlignment(HorizontalAlignment::Right);
+
+        Grid updateHeader;
+        updateHeader.MinHeight(48);
+        updateHeader.ColumnSpacing(16);
+        for (int i = 0; i < 4; ++i)
+        {
+            updateHeader.ColumnDefinitions().Append([] { ColumnDefinition c; c.Width(GridLengthHelper::Auto()); return c; }());
+        }
+        updateHeader.ColumnDefinitions().GetAt(1).Width(
+            GridLengthHelper::FromValueAndType(1, GridUnitType::Star));
+
+        FontIcon updateIcon;
+        updateIcon.Glyph(L"\xE895");
+        updateIcon.FontSize(16);
+        updateIcon.VerticalAlignment(VerticalAlignment::Center);
+        Grid::SetColumn(updateIcon, 0);
+        updateHeader.Children().Append(updateIcon);
+
+        StackPanel updateText;
+        updateText.Spacing(2);
+        updateText.VerticalAlignment(VerticalAlignment::Center);
+        updateText.Margin(Thickness{ 16, 0, 0, 0 });
+        TextBlock updateTitle;
+        updateTitle.Text(L"自动检测更新");
+        TextBlock updateDesc;
+        updateDesc.Text(L"固件版本 " + firmware);
+        updateDesc.FontSize(12);
+        updateDesc.Opacity(0.6);
+        updateText.Children().Append(updateTitle);
+        updateText.Children().Append(updateDesc);
+        Grid::SetColumn(updateText, 1);
+        updateHeader.Children().Append(updateText);
+
+        TextBlock updateStatus;
+        updateStatus.FontSize(14);
+        updateStatus.Text(config.autoCheckUpdate ? L"开" : L"关");
+        updateStatus.VerticalAlignment(VerticalAlignment::Center);
+        updateStatus.Margin(Thickness{ 0, 0, 12, 0 });
+        Grid::SetColumn(updateStatus, 2);
+        updateHeader.Children().Append(updateStatus);
+
+        updateToggle.Toggled([updateStatus](IInspectable const& sender, RoutedEventArgs const&)
+        {
+            if (auto control = sender.try_as<ToggleSwitch>())
+            {
+                const bool on = control.IsOn();
+                ::ScreenControl::Ui::Config().Data().autoCheckUpdate = on;
+                ::ScreenControl::Ui::Config().Save();
+                updateStatus.Text(on ? L"开" : L"关");
+            }
+        });
+
+        Grid::SetColumn(updateToggle, 3);
+        updateHeader.Children().Append(updateToggle);
+
+        // 检查频率 + 立即检查
+        Grid updateRow;
+        updateRow.ColumnSpacing(12);
+        updateRow.ColumnDefinitions().Append([] { ColumnDefinition c; c.Width(GridLengthHelper::Auto()); return c; }());
+        updateRow.ColumnDefinitions().Append([] { ColumnDefinition c; c.Width(GridLengthHelper::Auto()); return c; }());
+        updateRow.ColumnDefinitions().Append([] { ColumnDefinition c; c.Width(GridLengthHelper::FromValueAndType(1, GridUnitType::Star)); return c; }());
+        updateRow.ColumnDefinitions().Append([] { ColumnDefinition c; c.Width(GridLengthHelper::Auto()); return c; }());
+
+        TextBlock freqLabel;
+        freqLabel.Text(L"检查频率");
+        freqLabel.VerticalAlignment(VerticalAlignment::Center);
+        Grid::SetColumn(freqLabel, 0);
+        updateRow.Children().Append(freqLabel);
+
+        ComboBox freqBox;
+        freqBox.MinWidth(140);
+        freqBox.VerticalAlignment(VerticalAlignment::Center);
+        freqBox.Margin(Thickness{ 12, 0, 0, 0 });
+        freqBox.Items().Append(box_value(L"每次启动"));
+        freqBox.Items().Append(box_value(L"每天"));
+        freqBox.Items().Append(box_value(L"每周"));
+        freqBox.Items().Append(box_value(L"每月"));
+        freqBox.Items().Append(box_value(L"每半年"));
+
+        auto freqIndex = [](std::wstring const& value) -> int
+        {
+            if (value == L"daily") { return 1; }
+            if (value == L"weekly") { return 2; }
+            if (value == L"monthly") { return 3; }
+            if (value == L"halfyear") { return 4; }
+            return 0;
+        };
+        auto freqValueOf = [](int index) -> wchar_t const*
+        {
+            switch (index)
+            {
+            case 1: return L"daily";
+            case 2: return L"weekly";
+            case 3: return L"monthly";
+            case 4: return L"halfyear";
+            default: return L"startup";
+            }
+        };
+        freqBox.SelectedIndex(freqIndex(config.updateFrequency));
+        freqBox.SelectionChanged([freqValueOf](IInspectable const& sender, SelectionChangedEventArgs const&)
+        {
+            if (auto box = sender.try_as<ComboBox>())
+            {
+                ::ScreenControl::Ui::Config().Data().updateFrequency =
+                    freqValueOf(box.SelectedIndex());
+                ::ScreenControl::Ui::Config().Save();
+            }
+        });
+        Grid::SetColumn(freqBox, 1);
+        updateRow.Children().Append(freqBox);
+
+        Button checkNow;
+        checkNow.Content(box_value(L"立即检查"));
+        checkNow.VerticalAlignment(VerticalAlignment::Center);
+        Grid::SetColumn(checkNow, 3);
+        updateRow.Children().Append(checkNow);
+
+        // 手动检查时的进度环（与检查按钮并排，检查期间显示）
+        ProgressRing checkRing;
+        checkRing.Width(24);
+        checkRing.Height(24);
+        checkRing.IsActive(false);
+        checkRing.VerticalAlignment(VerticalAlignment::Center);
+        checkRing.Margin(Thickness{ 8, 0, 0, 0 });
+        Grid::SetColumn(checkRing, 3);
+        checkRing.Visibility(Visibility::Collapsed);
+        updateRow.Children().Append(checkRing);
+
+        StackPanel updateCard;
+        updateCard.Spacing(12);
+        updateCard.Children().Append(updateHeader);
+        updateCard.Children().Append(updateRow);
+        page.Children().Append(MakeCard(updateCard));
+
+        // 手动检查：后台线程拉接口，完成后回 UI 线程
+        checkNow.Click([this, checkNow, checkRing, updateDesc, firmware](IInspectable const&, RoutedEventArgs const&)
+        {
+            checkNow.IsEnabled(false);
+            checkRing.IsActive(true);
+            checkRing.Visibility(Visibility::Visible);
+
+            auto root = this->XamlRoot();
+            auto queue = this->DispatcherQueue();
+
+            std::thread([checkNow, checkRing, updateDesc, firmware, root, queue]()
+            {
+                auto release = ::ScreenControl::Ui::Firmware::FetchLatest();
+
+                queue.TryEnqueue([checkNow, checkRing, updateDesc, firmware, root, release]()
+                {
+                    checkNow.IsEnabled(true);
+                    checkRing.IsActive(false);
+                    checkRing.Visibility(Visibility::Collapsed);
+
+                    if (!release.found)
+                    {
+                        updateDesc.Text(L"固件版本 " + firmware + L"（检查失败）");
+                        return;
+                    }
+
+                    int current = 0;
+                    try
+                    {
+                        current = std::stoi(firmware);
+                    }
+                    catch (...)
+                    {
+                        current = 0;
+                    }
+
+                    if (release.version > current && root)
+                    {
+                        ::ScreenControl::Ui::Firmware::ShowDialog(root, release);
+                    }
+                    else
+                    {
+                        updateDesc.Text(L"固件版本 " + firmware + L"（已是最新）");
+                    }
+                });
+            }).detach();
+        });
+
         Content(MakeScrollable(page));
     }
 

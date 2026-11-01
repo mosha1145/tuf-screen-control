@@ -59,6 +59,10 @@ namespace ScreenControl::Device
         /// 睡眠模式：0x00 = 开启（无内容播放时关屏），0x01 = 关闭。
         bool SetSleepMode(bool enabled) noexcept;
 
+        /// 读取设备的 USB bcdDevice（设备实例 ID 里的 REV_xxxx）。
+        /// 例如 USB\VID_0B05&PID_1C7B&REV_0051 返回 L"51"。失败返回空串。
+        static std::wstring FirmwareRevision() noexcept;
+
         // ---------------- 图像帧 ----------------
         /// 发送一帧 JPEG（分块 + 逐块重试）。
         /// 调用方保证 jpeg 是 320x320、BGR 直接编码、无通道交换。

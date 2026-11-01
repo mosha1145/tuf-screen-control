@@ -336,6 +336,11 @@ namespace ScreenControl::Core
         m_config.powerLogout = root[L"power_logout"].AsBool(m_config.powerLogout);
         m_config.powerSleep = root[L"power_sleep"].AsBool(m_config.powerSleep);
         m_config.sleepMode = root[L"sleep_mode"].AsBool(m_config.sleepMode);
+        m_config.autoCheckUpdate = root[L"auto_check_update"].AsBool(m_config.autoCheckUpdate);
+        m_config.updateFrequency = root[L"update_frequency"].AsString(m_config.updateFrequency);
+        m_config.lastUpdateCheckUnix =
+            static_cast<long long>(root[L"last_update_check"].AsDouble(
+                static_cast<double>(m_config.lastUpdateCheckUnix)));
 
         // v1 曾有过 overlay_type == "hwinfo"（硬件信息叠加，已移除），归一到 none。
         std::wstring overlay = ToLower(root[L"overlay_type"].AsString(m_config.overlayType));
@@ -389,6 +394,9 @@ namespace ScreenControl::Core
         out << "  \"power_logout\": " << (m_config.powerLogout ? "true" : "false") << ",\n";
         out << "  \"power_sleep\": " << (m_config.powerSleep ? "true" : "false") << ",\n";
     out << "  \"sleep_mode\": " << (m_config.sleepMode ? "true" : "false") << ",\n";
+        out << "  \"auto_check_update\": " << (m_config.autoCheckUpdate ? "true" : "false") << ",\n";
+        out << "  \"update_frequency\": \"" << JsonEscape(NarrowUtf8(m_config.updateFrequency)) << "\",\n";
+        out << "  \"last_update_check\": " << m_config.lastUpdateCheckUnix << ",\n";
         out << "  \"overlay_type\": \"" << JsonEscape(NarrowUtf8(m_config.overlayType)) << "\",\n";
         out << "  \"clock_style\": \"" << JsonEscape(NarrowUtf8(m_config.clockStyle)) << "\",\n";
         out << "  \"smtc_filter_mode\": \"" << JsonEscape(NarrowUtf8(m_config.smtcFilterMode)) << "\",\n";

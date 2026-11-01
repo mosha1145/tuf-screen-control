@@ -290,6 +290,85 @@ namespace ScreenControl::Device
         return SendControl(kCmdSleepMode, enabled ? 0x02 : 0x01);
     }
 
+    std::wstring ScreenController::FirmwareRevision() noexcept
+    {
+        // 注意：设备实例 ID 是 USB\VID_0B05&PID_1C7B\<序列号>，不含 REV。
+        // REV_xxxx 在【硬件 ID】里，例如 USB\VID_0B05&PID_1C7B&REV_0051。
+        // REV_ 后的 4 位按十进制数字解析（0051 -> 51），与 ASUS 固件版本号一致。
+        HDEVINFO set = SetupDiGetClassDevsW(nullptr, L"USB", nullptr,
+                                            DIGCF_ALLCLASSES | DIGCF_PRESENT);
+        if (set == INVALID_HANDLE_VALUE)
+        {
+            return {};
+        }
+
+        std::wstring result;
+        SP_DEVINFO_DATA info{};
+        info.cbSize = sizeof(info);
+
+        wchar_t vidToken[16]{};
+        wchar_t pidToken[16]{};
+        swprintf_s(vidToken, L"VID_%04X", kAsusVendorId);
+        swprintf_s(pidToken, L"PID_%04X", kScreenProductId);
+
+        for (DWORD index = 0; SetupDiEnumDeviceInfo(set, index, &info); ++index)
+        {
+            DWORD type = 0;
+            DWORD bytes = 0;
+            ::SetupDiGetDeviceRegistryPropertyW(set, &info, SPDRP_HARDWAREID, &type,
+                                                nullptr, 0, &bytes);
+            if (bytes == 0)
+            {
+                continue;
+            }
+
+            std::vector<wchar_t> buffer(bytes / sizeof(wchar_t) + 2, L'\0');
+            if (!::SetupDiGetDeviceRegistryPropertyW(
+                    set, &info, SPDRP_HARDWAREID, &type,
+                    reinterpret_cast<PBYTE>(buffer.data()), bytes, nullptr))
+            {
+                continue;
+            }
+
+            // 硬件 ID 是 REG_MULTI_SZ：逐个字符串检查
+            for (wchar_t const* cursor = buffer.data(); *cursor != L'\0';
+                 cursor += wcslen(cursor) + 1)
+            {
+                std::wstring hardwareId = cursor;
+                std::transform(hardwareId.begin(), hardwareId.end(),
+                               hardwareId.begin(), ::towupper);
+
+                if (hardwareId.find(vidToken) == std::wstring::npos ||
+                    hardwareId.find(pidToken) == std::wstring::npos)
+                {
+                    continue;
+                }
+
+                const std::size_t pos = hardwareId.find(L"REV_");
+                if (pos == std::wstring::npos || pos + 8 > hardwareId.size())
+                {
+                    continue;
+                }
+
+                const std::wstring rev = hardwareId.substr(pos + 4, 4);
+                if (std::all_of(rev.begin(), rev.end(),
+                                [](wchar_t ch) { return ::iswdigit(ch) != 0; }))
+                {
+                    result = std::to_wstring(std::stoi(rev));
+                }
+                break;
+            }
+
+            if (!result.empty())
+            {
+                break;
+            }
+        }
+
+        SetupDiDestroyDeviceInfoList(set);
+        return result;
+    }
+
     SendStatus ScreenController::SendFrame(std::span<const std::uint8_t> jpeg,
                                            unsigned blockDelayUs) noexcept
     {

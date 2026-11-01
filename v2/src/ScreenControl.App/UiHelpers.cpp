@@ -129,6 +129,10 @@ namespace ScreenControl::Ui
         expander.CornerRadius(CornerRadius{ 4, 4, 4, 4 });
         expander.HorizontalAlignment(HorizontalAlignment::Stretch);
         expander.HorizontalContentAlignment(HorizontalAlignment::Stretch);
+        // 统一卡片高度：Expander 模板会在标题行外再套一层内边距，
+        // 导致它比 MakeBehaviorCard（MinHeight 64）高出一截。
+        // 这里把纵向内边距收掉，让两种卡片高度一致。
+        expander.Padding(Thickness{ 16, 0, 16, 0 });
         expander.Header(header);
         // 子选项缩进：与标题文字对齐（图标列 16 + 列间距 16，约 32），
         // 而不是贴着卡片左侧与图标对齐。
