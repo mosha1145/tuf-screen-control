@@ -9,6 +9,9 @@
 #include "AppConfig.h"
 #include "PlaybackController.h"
 #include "UiHelpers.h"
+#include "SettingsPage.xaml.h"
+#include "ScreenController.h"
+#include "FirmwareUpdater.h"
 #include "DisplayPage.xaml.h"
 #include "SettingsPage.xaml.h"
 
@@ -170,6 +173,90 @@ nav.Content(m_contentFrame);
 
         // 托盘图标 + 关闭行为（隐藏到托盘 / 退出 / 询问）
         SetupTrayAndCloseBehavior();
+
+        // 窗口第一次完成布局后再做固件更新检查（此时 XamlRoot 可用）
+        root.Loaded([this](auto&&, auto&&)
+        {
+            MaybeCheckFirmwareUpdate();
+        });
+    }
+
+    void MainWindow::MaybeCheckFirmwareUpdate()
+    {
+        auto& config = ::ScreenControl::Ui::Config().Data();
+        if (!config.autoCheckUpdate)
+        {
+            return;
+        }
+
+        const auto now = std::chrono::duration_cast<std::chrono::seconds>(
+                             std::chrono::system_clock::now().time_since_epoch())
+                             .count();
+
+        long long interval = 0;   // 每次启动：0，代表不限制
+        if (config.updateFrequency == L"daily")
+        {
+            interval = 86400;
+        }
+        else if (config.updateFrequency == L"weekly")
+        {
+            interval = 604800;
+        }
+        else if (config.updateFrequency == L"monthly")
+        {
+            interval = 2592000;
+        }
+        else if (config.updateFrequency == L"halfyear")
+        {
+            interval = 15552000;
+        }
+
+        if (interval > 0 && config.lastUpdateCheckUnix > 0 &&
+            now - config.lastUpdateCheckUnix < interval)
+        {
+            return;   // 还没到下次检查时间
+        }
+
+        // 先记录检查时间，避免失败后每次启动都重试
+        config.lastUpdateCheckUnix = now;
+        ::ScreenControl::Ui::Config().Save();
+
+        if (auto element = Content().try_as<FrameworkElement>())
+        {
+            auto root = element.XamlRoot();
+            if (root)
+            {
+                auto queue = DispatcherQueue();
+                std::thread([root, queue]()
+                {
+                    auto release = ::ScreenControl::Ui::Firmware::FetchLatest();
+                    if (!release.found)
+                    {
+                        return;
+                    }
+
+                    int current = 0;
+                    try
+                    {
+                        current = std::stoi(::ScreenControl::Device::ScreenController::FirmwareRevision());
+                    }
+                    catch (...)
+                    {
+                        current = 0;
+                    }
+
+                    if (release.version <= current)
+                    {
+                        return;
+                    }
+
+                    queue.TryEnqueue([root, release]()
+                    {
+                        ::ScreenControl::Ui::Firmware::ShowDialog(root, release);
+                    });
+                }).detach();
+            }
+        }
     }
 
     void MainWindow::ApplyPersistedDeviceState()

@@ -64,6 +64,9 @@ namespace winrt::ScreenControl::implementation
         /// 启动时把配置里的显示参数与屏幕状态应用到设备。
         void ApplyPersistedDeviceState();
 
+        /// 按配置的频率在启动时检查固件更新（有新版弹窗）。
+        void MaybeCheckFirmwareUpdate();
+
         // ---------------- 托盘 / 关闭行为 ----------------
         void SetupTrayAndCloseBehavior();
         /// 隐藏前把界面切成实色底并摘掉 Mica，避免关闭/隐藏瞬时白闪。
