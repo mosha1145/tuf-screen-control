@@ -7,7 +7,7 @@
 //    * 素材路径相对仓库根存储，软件目录搬移后仍有效
 //
 //  v2 变更（已确认）：
-//    * 配置位置改为 %LOCALAPPDATA%\AsusAioScreenControl\config.json
+//    * 配置位置改为 %LOCALAPPDATA%\TufScreenControl\config.json
 //    * 首次启动从仓库根 config.json 迁移，并把相对路径重定位为绝对路径
 //      （因为配置基目录变了，v1 存储的相对路径会失效）
 //    * 绝不修改/删除 v1 的 config.json，用户可随时回退到 v1
@@ -88,7 +88,7 @@ namespace ScreenControl::Core
         /// v1 配置位置（仓库根，只读，不修改）。
         static std::filesystem::path DefaultLegacyConfigPath();
 
-        /// v2 配置位置（%LOCALAPPDATA%\AsusAioScreenControl\config.json）。
+        /// v2 配置位置（%LOCALAPPDATA%\TufScreenControl\config.json）。
         static std::filesystem::path DefaultConfigPath();
 
         /// 传空路径时自动探测可写位置（LocalAppData -> exe 目录 -> 临时目录）。

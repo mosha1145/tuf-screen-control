@@ -1,4 +1,4 @@
-﻿# Python 编译缓存
+# Python 编译缓存
 __pycache__/
 *.pyc
 
@@ -23,3 +23,5 @@ Generated Files/
 v2/out/
 .vs/
 *.user
+config.json
+config.json.bak_*

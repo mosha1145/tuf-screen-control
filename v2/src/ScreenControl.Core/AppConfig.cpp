@@ -149,7 +149,7 @@ namespace ScreenControl::Core
         {
             base = std::filesystem::temp_directory_path();
         }
-        return base / L"AsusAioScreenControl" / L"config.json";
+        return base / L"TufScreenControl" / L"config.json";
     }
 
     std::filesystem::path ConfigStore::DefaultLegacyConfigPath()
@@ -209,7 +209,7 @@ namespace ScreenControl::Core
 
     std::filesystem::path ConfigStore::ResolveWritablePath()
     {
-        // 1) 首选：%LOCALAPPDATA%\AsusAioScreenControl\config.json
+        // 1) 首选：%LOCALAPPDATA%\TufScreenControl\config.json
         const std::filesystem::path preferred = DefaultConfigPath();
         if (!preferred.parent_path().empty() && IsDirectoryWritable(preferred.parent_path()))
         {
@@ -224,7 +224,7 @@ namespace ScreenControl::Core
         }
 
         // 3) 最后兜底：临时目录（至少不会崩，重启后可能丢失）
-        return std::filesystem::temp_directory_path() / L"AsusAioScreenControl" / L"config.json";
+        return std::filesystem::temp_directory_path() / L"TufScreenControl" / L"config.json";
     }
 
     std::filesystem::path ConfigStore::AssetRoot() const
