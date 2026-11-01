@@ -31,8 +31,8 @@ namespace ScreenControl::Core
     struct AppConfig
     {
         // ---- 屏幕 ----
-        bool screenOn = true;
-        int brightness = 50;                 ///< 0-100（v1 代码默认 50）
+        bool screenOn = true;                ///< 默认开屏
+        int brightness = 100;                ///< 0-100（默认满亮度）
         std::wstring fitMode = L"contain";   ///< contain / cover / stretch
         int rotation = 0;                    ///< 0 / 90 / 180 / 270
 

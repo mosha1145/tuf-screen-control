@@ -198,6 +198,12 @@ nav.Content(m_contentFrame);
             return;
         }
 
+        // 没枚举到设备就没有"当前固件"可比，直接跳过，避免误报更新。
+        if (!m_player || !m_player->DeviceReady())
+        {
+            return;
+        }
+
         const auto now = std::chrono::duration_cast<std::chrono::seconds>(
                              std::chrono::system_clock::now().time_since_epoch())
                              .count();
@@ -620,7 +626,7 @@ nav.Content(m_contentFrame);
         {
             if (m_player)
             {
-                m_player->OnDeviceChanged();
+                m_player->RefreshDevice();   // 立即重新枚举，状态才准确
             }
             RefreshDeviceBadge();
         };

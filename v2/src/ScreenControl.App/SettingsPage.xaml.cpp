@@ -129,7 +129,7 @@ namespace winrt::ScreenControl::implementation
         };
 
         TextBlock themeValue;
-        themeValue.FontSize(12);
+        themeValue.FontSize(14);
         themeValue.VerticalAlignment(VerticalAlignment::Center);
         themeValue.Text(themeLabelOf(MainWindow::Current()->CurrentTheme()));
 
@@ -181,7 +181,7 @@ namespace winrt::ScreenControl::implementation
         };
 
         TextBlock colorValue;
-        colorValue.FontSize(12);
+        colorValue.FontSize(14);
         colorValue.VerticalAlignment(VerticalAlignment::Center);
         colorValue.Text(colorLabelOf(config.themeColor));
 
@@ -225,6 +225,7 @@ namespace winrt::ScreenControl::implementation
         FontIcon sleepIcon;
         sleepIcon.Glyph(L"\xE708");
         sleepIcon.FontSize(16);
+        sleepIcon.Width(16);
         sleepIcon.VerticalAlignment(VerticalAlignment::Center);
         Grid::SetColumn(sleepIcon, 0);
         sleepRow.Children().Append(sleepIcon);
@@ -292,7 +293,6 @@ namespace winrt::ScreenControl::implementation
 
         // 与「睡眠模式」完全相同的行结构，保证高度和右侧元素对齐一致
         Grid updateHeader;
-        updateHeader.ColumnSpacing(16);
         updateHeader.HorizontalAlignment(HorizontalAlignment::Stretch);
         updateHeader.ColumnDefinitions().Append([] { ColumnDefinition c; c.Width(GridLengthHelper::Auto()); return c; }());
         updateHeader.ColumnDefinitions().Append([] { ColumnDefinition c; c.Width(GridLengthHelper::FromValueAndType(1, GridUnitType::Star)); return c; }());
@@ -302,6 +302,7 @@ namespace winrt::ScreenControl::implementation
         FontIcon updateIcon;
         updateIcon.Glyph(L"\xE895");
         updateIcon.FontSize(16);
+        updateIcon.Width(16);
         updateIcon.VerticalAlignment(VerticalAlignment::Center);
         Grid::SetColumn(updateIcon, 0);
         updateHeader.Children().Append(updateIcon);
@@ -386,7 +387,7 @@ namespace winrt::ScreenControl::implementation
         };
 
         TextBlock freqValue;
-        freqValue.FontSize(12);
+        freqValue.FontSize(14);
         freqValue.VerticalAlignment(VerticalAlignment::Center);
 
         freqBox.SelectedIndex(freqIndex(config.updateFrequency));

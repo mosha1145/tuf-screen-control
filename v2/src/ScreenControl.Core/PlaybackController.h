@@ -62,6 +62,9 @@ namespace ScreenControl::Core
         /// 设备插拔后调用：丢弃旧句柄，下一次访问会重新枚举（无需重启软件）。
         void OnDeviceChanged();
 
+        /// 立即重建设备连接（UI 线程调用，用于插拔后刷新状态）。返回是否已连上。
+        bool RefreshDevice();
+
         // ---------------- 播放 ----------------
         /// 播放指定素材（照片或视频自动识别）。会先停止当前播放。
         bool Play(std::filesystem::path const& path);

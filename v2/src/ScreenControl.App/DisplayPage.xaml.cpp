@@ -55,8 +55,9 @@ namespace winrt::ScreenControl::implementation
         m_previewImage = Image{};
         m_previewImage.Source(m_previewSource);
         m_previewImage.Stretch(Stretch::Uniform);
-        m_previewImage.Width(320);
-        m_previewImage.Height(320);
+        // 不写死 320：让画面填满裁剪层，才能和外框的 8px 圆角完全重合。
+        m_previewImage.HorizontalAlignment(HorizontalAlignment::Stretch);
+        m_previewImage.VerticalAlignment(VerticalAlignment::Stretch);
         m_previewPlaceholder = previewText;
 
         // 再包一层圆角 8 的 Border 夹住画面，保证 Image 也被裁剪成 8px 圆角
@@ -183,14 +184,6 @@ namespace winrt::ScreenControl::implementation
             ::ScreenControl::Ui::Config().Save();
         });
         controls.Children().Append(rotation);
-
-        InfoBar info;
-        info.IsOpen(true);
-        info.IsClosable(false);
-        info.Severity(InfoBarSeverity::Informational);
-        info.Title(L"当前进度");
-        info.Message(L"HID 发送与照片/视频播放已接入；素材导入（ffmpeg 转码）与实时预览将在后续迭代补齐。");
-        controls.Children().Append(info);
 
         auto controlsCard = MakeCard(controls);
         Grid::SetColumn(controlsCard, 1);

@@ -68,6 +68,14 @@ namespace ScreenControl::Core
         m_deviceDirty.store(true);
     }
 
+    bool PlaybackController::RefreshDevice()
+    {
+        // 插拔后旧句柄一定失效，先无条件关闭再重新枚举，状态才准确。
+        m_device.Close();
+        m_deviceDirty.store(false);
+        return m_device.Open();
+    }
+
     void PlaybackController::RefreshDeviceIfDirty()
     {
         if (m_deviceDirty.exchange(false))

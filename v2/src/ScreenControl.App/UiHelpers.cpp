@@ -134,10 +134,10 @@ namespace ScreenControl::Ui
         // 这里把纵向内边距收掉，让两种卡片高度一致。
         expander.Padding(Thickness{ 16, 0, 16, 0 });
         expander.Header(header);
-        // 子选项缩进：与标题文字对齐（图标列 16 + 列间距 16，约 32），
-        // 而不是贴着卡片左侧与图标对齐。
+        // 展开内容：左侧缩进与标题文字对齐（图标列 16 + 列间距 16 = 32），
+        // 上下留白保持一致（上 4 / 下 16），避免贴住标题或卡片底边。
         Grid bodyHost;
-        bodyHost.Margin(Thickness{ 32, 0, 0, 0 });
+        bodyHost.Margin(Thickness{ 32, 4, 0, 16 });
         if (auto bodyElement = body.try_as<FrameworkElement>())
         {
             bodyElement.HorizontalAlignment(HorizontalAlignment::Stretch);
