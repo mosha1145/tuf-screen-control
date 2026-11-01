@@ -62,8 +62,23 @@ namespace ScreenControl::Core
         }
     }
 
+    void PlaybackController::OnDeviceChanged()
+    {
+        // 只置标记：真正的 Close/Open 留到持有设备的那条线程里做，避免竞态。
+        m_deviceDirty.store(true);
+    }
+
+    void PlaybackController::RefreshDeviceIfDirty()
+    {
+        if (m_deviceDirty.exchange(false))
+        {
+            m_device.Close();
+        }
+    }
+
     bool PlaybackController::SetBrightness(int percent)
     {
+        RefreshDeviceIfDirty();
         if (percent < 0) { percent = 0; }
         if (percent > 100) { percent = 100; }
         if (!EnsureDevice(m_device))
@@ -75,6 +90,7 @@ namespace ScreenControl::Core
 
     bool PlaybackController::SetScreenPower(bool on)
     {
+        RefreshDeviceIfDirty();
         // 先更新标志：关屏期间帧泵不再向设备发送帧（省 HID 带宽/CPU），
         // 但预览回调照常执行，预览画面仍然正常播放。
         m_screenOn.store(on);
@@ -91,6 +107,7 @@ namespace ScreenControl::Core
 
     bool PlaybackController::SetSleepMode(bool enabled)
     {
+        RefreshDeviceIfDirty();
         if (!EnsureDevice(m_device))
         {
             return false;
@@ -253,6 +270,7 @@ namespace ScreenControl::Core
 
         while (m_running.load() && !m_stopRequested)
         {
+            RefreshDeviceIfDirty();
             const auto tickStart = std::chrono::steady_clock::now();
 
             if (!decoder->ReadFrame(frame) || frame.Empty())

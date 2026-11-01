@@ -181,6 +181,15 @@ nav.Content(m_contentFrame);
         });
     }
 
+    void MainWindow::RefreshDeviceBadge()
+    {
+        if (m_deviceText)
+        {
+            const bool ready = m_player && m_player->DeviceReady();
+            m_deviceText.Text(ready ? L"设备：已连接" : L"设备：未连接");
+        }
+    }
+
     void MainWindow::MaybeCheckFirmwareUpdate()
     {
         auto& config = ::ScreenControl::Ui::Config().Data();
@@ -605,6 +614,16 @@ nav.Content(m_contentFrame);
         // 第二个实例启动时会广播这条消息，这里把窗口叫回来
         handlers.activateMessage = ::ScreenControl::SingleInstance::ActivateMessageId();
         handlers.activate = [this]() { ShowFromTray(); };
+
+        // 设备插拔：重新枚举设备（无需重启软件），并刷新界面上的连接状态
+        handlers.deviceChanged = [this]()
+        {
+            if (m_player)
+            {
+                m_player->OnDeviceChanged();
+            }
+            RefreshDeviceBadge();
+        };
 
         m_powerMonitor.Start(hwnd, handlers);
 

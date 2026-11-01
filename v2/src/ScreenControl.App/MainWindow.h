@@ -67,6 +67,9 @@ namespace winrt::ScreenControl::implementation
         /// 按配置的频率在启动时检查固件更新（有新版弹窗）。
         void MaybeCheckFirmwareUpdate();
 
+        /// 刷新预览框左上角的设备连接状态徽标。
+        void RefreshDeviceBadge();
+
         // ---------------- 托盘 / 关闭行为 ----------------
         void SetupTrayAndCloseBehavior();
         /// 隐藏前把界面切成实色底并摘掉 Mica，避免关闭/隐藏瞬时白闪。

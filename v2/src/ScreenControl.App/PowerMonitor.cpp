@@ -93,6 +93,11 @@ namespace ScreenControl
 
             switch (message)
             {
+            case WM_DEVICECHANGE:
+                // 设备插拔：不消费消息，交给默认处理，只做通知。
+                Invoke(self->m_handlers.deviceChanged);
+                break;
+
             case WM_POWERBROADCAST:
                 if (wParam == PBT_APMSUSPEND)
                 {

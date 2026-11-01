@@ -59,6 +59,9 @@ namespace ScreenControl::Core
         bool SetScreenPower(bool on);
         bool SetSleepMode(bool enabled);
 
+        /// 设备插拔后调用：丢弃旧句柄，下一次访问会重新枚举（无需重启软件）。
+        void OnDeviceChanged();
+
         // ---------------- 播放 ----------------
         /// 播放指定素材（照片或视频自动识别）。会先停止当前播放。
         bool Play(std::filesystem::path const& path);
@@ -87,6 +90,8 @@ namespace ScreenControl::Core
 
     private:
         void WorkerLoop(std::filesystem::path path, MediaKind kind);
+        /// 若设备插拔过，先关闭旧句柄，让后续 Open() 重新枚举。
+        void RefreshDeviceIfDirty();
         void Notify(std::wstring const& message) const;
         void SleepUntil(std::chrono::steady_clock::time_point deadline) const;
 
@@ -107,6 +112,8 @@ namespace ScreenControl::Core
         std::atomic<bool> m_photoDirty{ true };
         // 屏幕开关：关屏期间帧泵跳过设备发送，但预览回调继续
         std::atomic<bool> m_screenOn{ true };
+        // 设备插拔标记：置位后下一次访问设备前先 Close()，触发重新枚举
+        std::atomic<bool> m_deviceDirty{ false };
 
         std::thread m_worker;
         std::atomic<bool> m_running{ false };

@@ -275,7 +275,7 @@ namespace winrt::ScreenControl::implementation
         // ---------------- 自动检测更新 ----------------
         page.Children().Append(MakeSectionTitle(L"更新"));
 
-        // 当前固件版本来自设备的 USB 实例 ID（REV_xxxx）
+        // 当前固件版本来自设备的 USB 硬件 ID（REV_xxxx）
         std::wstring firmware = ::ScreenControl::Device::ScreenController::FirmwareRevision();
         if (firmware.empty())
         {
@@ -290,15 +290,14 @@ namespace winrt::ScreenControl::implementation
         updateToggle.VerticalAlignment(VerticalAlignment::Center);
         updateToggle.HorizontalAlignment(HorizontalAlignment::Right);
 
+        // 与「睡眠模式」完全相同的行结构，保证高度和右侧元素对齐一致
         Grid updateHeader;
-        updateHeader.MinHeight(48);
         updateHeader.ColumnSpacing(16);
-        for (int i = 0; i < 4; ++i)
-        {
-            updateHeader.ColumnDefinitions().Append([] { ColumnDefinition c; c.Width(GridLengthHelper::Auto()); return c; }());
-        }
-        updateHeader.ColumnDefinitions().GetAt(1).Width(
-            GridLengthHelper::FromValueAndType(1, GridUnitType::Star));
+        updateHeader.HorizontalAlignment(HorizontalAlignment::Stretch);
+        updateHeader.ColumnDefinitions().Append([] { ColumnDefinition c; c.Width(GridLengthHelper::Auto()); return c; }());
+        updateHeader.ColumnDefinitions().Append([] { ColumnDefinition c; c.Width(GridLengthHelper::FromValueAndType(1, GridUnitType::Star)); return c; }());
+        updateHeader.ColumnDefinitions().Append([] { ColumnDefinition c; c.Width(GridLengthHelper::Auto()); return c; }());
+        updateHeader.ColumnDefinitions().Append([] { ColumnDefinition c; c.Width(GridLengthHelper::Auto()); return c; }());
 
         FontIcon updateIcon;
         updateIcon.Glyph(L"\xE895");
@@ -344,24 +343,11 @@ namespace winrt::ScreenControl::implementation
         Grid::SetColumn(updateToggle, 3);
         updateHeader.Children().Append(updateToggle);
 
-        // 检查频率 + 立即检查
-        Grid updateRow;
-        updateRow.ColumnSpacing(12);
-        updateRow.ColumnDefinitions().Append([] { ColumnDefinition c; c.Width(GridLengthHelper::Auto()); return c; }());
-        updateRow.ColumnDefinitions().Append([] { ColumnDefinition c; c.Width(GridLengthHelper::Auto()); return c; }());
-        updateRow.ColumnDefinitions().Append([] { ColumnDefinition c; c.Width(GridLengthHelper::FromValueAndType(1, GridUnitType::Star)); return c; }());
-        updateRow.ColumnDefinitions().Append([] { ColumnDefinition c; c.Width(GridLengthHelper::Auto()); return c; }());
+        page.Children().Append(MakeBehaviorCard(updateHeader));
 
-        TextBlock freqLabel;
-        freqLabel.Text(L"检查频率");
-        freqLabel.VerticalAlignment(VerticalAlignment::Center);
-        Grid::SetColumn(freqLabel, 0);
-        updateRow.Children().Append(freqLabel);
-
+        // 检查频率：折叠卡片，样式与「个性化」的两个折叠条目一致
         ComboBox freqBox;
-        freqBox.MinWidth(140);
-        freqBox.VerticalAlignment(VerticalAlignment::Center);
-        freqBox.Margin(Thickness{ 12, 0, 0, 0 });
+        freqBox.MinWidth(160);
         freqBox.Items().Append(box_value(L"每次启动"));
         freqBox.Items().Append(box_value(L"每天"));
         freqBox.Items().Append(box_value(L"每周"));
@@ -387,44 +373,67 @@ namespace winrt::ScreenControl::implementation
             default: return L"startup";
             }
         };
+        auto freqLabelOf = [](int index) -> wchar_t const*
+        {
+            switch (index)
+            {
+            case 1: return L"每天";
+            case 2: return L"每周";
+            case 3: return L"每月";
+            case 4: return L"每半年";
+            default: return L"每次启动";
+            }
+        };
+
+        TextBlock freqValue;
+        freqValue.FontSize(12);
+        freqValue.VerticalAlignment(VerticalAlignment::Center);
+
         freqBox.SelectedIndex(freqIndex(config.updateFrequency));
-        freqBox.SelectionChanged([freqValueOf](IInspectable const& sender, SelectionChangedEventArgs const&)
+        freqValue.Text(freqLabelOf(freqBox.SelectedIndex()));
+        freqBox.SelectionChanged([freqValueOf, freqLabelOf, freqValue](IInspectable const& sender, SelectionChangedEventArgs const&)
         {
             if (auto box = sender.try_as<ComboBox>())
             {
-                ::ScreenControl::Ui::Config().Data().updateFrequency =
-                    freqValueOf(box.SelectedIndex());
+                ::ScreenControl::Ui::Config().Data().updateFrequency = freqValueOf(box.SelectedIndex());
                 ::ScreenControl::Ui::Config().Save();
+                freqValue.Text(freqLabelOf(box.SelectedIndex()));
             }
         });
-        Grid::SetColumn(freqBox, 1);
-        updateRow.Children().Append(freqBox);
 
         Button checkNow;
         checkNow.Content(box_value(L"立即检查"));
         checkNow.VerticalAlignment(VerticalAlignment::Center);
-        Grid::SetColumn(checkNow, 3);
-        updateRow.Children().Append(checkNow);
 
-        // 手动检查时的进度环（与检查按钮并排，检查期间显示）
         ProgressRing checkRing;
         checkRing.Width(24);
         checkRing.Height(24);
         checkRing.IsActive(false);
         checkRing.VerticalAlignment(VerticalAlignment::Center);
-        checkRing.Margin(Thickness{ 8, 0, 0, 0 });
-        Grid::SetColumn(checkRing, 3);
         checkRing.Visibility(Visibility::Collapsed);
-        updateRow.Children().Append(checkRing);
 
-        StackPanel updateCard;
-        updateCard.Spacing(12);
-        updateCard.Children().Append(updateHeader);
-        updateCard.Children().Append(updateRow);
-        page.Children().Append(MakeCard(updateCard));
+        StackPanel actions;
+        actions.Orientation(Orientation::Horizontal);
+        actions.Spacing(10);
+        actions.Children().Append(checkNow);
+        actions.Children().Append(checkRing);
 
-        // 手动检查：后台线程拉接口，完成后回 UI 线程
-        checkNow.Click([this, checkNow, checkRing, updateDesc, firmware](IInspectable const&, RoutedEventArgs const&)
+        StackPanel freqBody;
+        freqBody.Spacing(12);
+        freqBody.Children().Append(freqBox);
+        freqBody.Children().Append(actions);
+
+        page.Children().Append(MakeSettingsCard(L"\xE823", L"检查频率", freqValue, freqBody));
+
+        // 检查结果用 InfoBar 呈现（官方控件，比在标题后面拼接文字更清晰）
+        InfoBar resultBar;
+        resultBar.IsOpen(false);
+        resultBar.IsClosable(true);
+        resultBar.Severity(InfoBarSeverity::Informational);
+        resultBar.Title(L"检查更新");
+        page.Children().Append(resultBar);
+
+        checkNow.Click([this, checkNow, checkRing, firmware, resultBar](IInspectable const&, RoutedEventArgs const&)
         {
             checkNow.IsEnabled(false);
             checkRing.IsActive(true);
@@ -433,11 +442,11 @@ namespace winrt::ScreenControl::implementation
             auto root = this->XamlRoot();
             auto queue = this->DispatcherQueue();
 
-            std::thread([checkNow, checkRing, updateDesc, firmware, root, queue]()
+            std::thread([checkNow, checkRing, firmware, root, queue, resultBar]()
             {
                 auto release = ::ScreenControl::Ui::Firmware::FetchLatest();
 
-                queue.TryEnqueue([checkNow, checkRing, updateDesc, firmware, root, release]()
+                queue.TryEnqueue([checkNow, checkRing, firmware, root, release, resultBar]()
                 {
                     checkNow.IsEnabled(true);
                     checkRing.IsActive(false);
@@ -445,7 +454,10 @@ namespace winrt::ScreenControl::implementation
 
                     if (!release.found)
                     {
-                        updateDesc.Text(L"固件版本 " + firmware + L"（检查失败）");
+                        resultBar.Severity(InfoBarSeverity::Error);
+                        resultBar.Title(L"检查更新失败");
+                        resultBar.Message(L"无法获取固件信息，请检查网络后重试。");
+                        resultBar.IsOpen(true);
                         return;
                     }
 
@@ -459,18 +471,27 @@ namespace winrt::ScreenControl::implementation
                         current = 0;
                     }
 
-                    if (release.version > current && root)
+                    if (release.version > current)
                     {
-                        ::ScreenControl::Ui::Firmware::ShowDialog(root, release);
+                        resultBar.Severity(InfoBarSeverity::Informational);
+                        resultBar.Title(L"发现新固件 " + std::to_wstring(release.version));
+                        resultBar.Message(L"当前版本 " + firmware + L"，安装包 " + release.fileSize + L"。");
+                        resultBar.IsOpen(true);
+                        if (root)
+                        {
+                            ::ScreenControl::Ui::Firmware::ShowDialog(root, release);
+                        }
                     }
                     else
                     {
-                        updateDesc.Text(L"固件版本 " + firmware + L"（已是最新）");
+                        resultBar.Severity(InfoBarSeverity::Success);
+                        resultBar.Title(L"已是最新固件");
+                        resultBar.Message(L"当前版本 " + firmware + L"。");
+                        resultBar.IsOpen(true);
                     }
                 });
             }).detach();
         });
-
         Content(MakeScrollable(page));
     }
 

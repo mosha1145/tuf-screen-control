@@ -29,6 +29,11 @@
 #include <winhttp.h>
 #pragma comment(lib, "winhttp.lib")
 
+#include <bcrypt.h>
+#pragma comment(lib, "bcrypt.lib")
+
+#include <vector>
+
 #include <winrt/Windows.Foundation.h>
 #include <winrt/Windows.System.h>
 #include <winrt/Microsoft.UI.Dispatching.h>
@@ -47,6 +52,7 @@ namespace ScreenControl::Ui
         std::wstring fileSize;
         std::wstring title;
         std::wstring downloadUrl;
+        std::wstring sha256;   ///< 接口给出的安装包 SHA-256（大写十六进制）
     };
 
     namespace Firmware
@@ -288,6 +294,7 @@ namespace ScreenControl::Ui
             release.version = version;
             release.fileSize = file[L"FileSize"].AsString(L"未知");
             release.title = file[L"Title"].AsString(L"");
+            release.sha256 = file[L"sha256"].AsString(L"");
             release.downloadUrl = file[L"DownloadUrl"][L"China"].AsString(L"");
             if (release.downloadUrl.empty())
             {
@@ -338,6 +345,72 @@ namespace ScreenControl::Ui
                 }
                 const std::size_t slash = clean.find_last_of(L'/');
                 return slash == std::wstring::npos ? clean : clean.substr(slash + 1);
+            }
+
+            /// 计算文件 SHA-256（大写十六进制）。失败返回空串。
+            inline std::wstring FileSha256(std::filesystem::path const& path)
+            {
+                BCRYPT_ALG_HANDLE alg = nullptr;
+                if (!BCRYPT_SUCCESS(::BCryptOpenAlgorithmProvider(
+                        &alg, BCRYPT_SHA256_ALGORITHM, nullptr, 0)))
+                {
+                    return {};
+                }
+
+                DWORD objectSize = 0;
+                DWORD written = 0;
+                if (!BCRYPT_SUCCESS(::BCryptGetProperty(alg, BCRYPT_OBJECT_LENGTH,
+                                                        reinterpret_cast<PUCHAR>(&objectSize),
+                                                        sizeof(objectSize), &written, 0)))
+                {
+                    ::BCryptCloseAlgorithmProvider(alg, 0);
+                    return {};
+                }
+
+                std::vector<UCHAR> object(objectSize);
+
+                BCRYPT_HASH_HANDLE hash = nullptr;
+                if (!BCRYPT_SUCCESS(::BCryptCreateHash(alg, &hash, object.data(), objectSize,
+                                                       nullptr, 0, 0)))
+                {
+                    ::BCryptCloseAlgorithmProvider(alg, 0);
+                    return {};
+                }
+
+                std::wstring result;
+                {
+                    std::ifstream in(path, std::ios::binary);
+                    if (in)
+                    {
+                        std::vector<char> buffer(64 * 1024);
+                        while (in)
+                        {
+                            in.read(buffer.data(), static_cast<std::streamsize>(buffer.size()));
+                            const auto got = in.gcount();
+                            if (got <= 0)
+                            {
+                                break;
+                            }
+                            ::BCryptHashData(hash, reinterpret_cast<PUCHAR>(buffer.data()),
+                                             static_cast<ULONG>(got), 0);
+                        }
+
+                        UCHAR digest[32]{};
+                        if (BCRYPT_SUCCESS(::BCryptFinishHash(hash, digest, sizeof(digest), 0)))
+                        {
+                            wchar_t hex[3]{};
+                            for (UCHAR byte : digest)
+                            {
+                                swprintf_s(hex, L"%02X", byte);
+                                result += hex;
+                            }
+                        }
+                    }
+                }
+
+                ::BCryptDestroyHash(hash);
+                ::BCryptCloseAlgorithmProvider(alg, 0);
+                return result;
             }
 
             /// 同步下载。progress(已收字节, 总字节)，总字节未知时为 0。
@@ -464,16 +537,17 @@ namespace ScreenControl::Ui
                 const std::wstring url = EncodeUrl(release.downloadUrl);
 
                 std::filesystem::path targetDir;
-                if (wchar_t* localAppData = nullptr;
-                    SUCCEEDED(::SHGetKnownFolderPath(FOLDERID_LocalAppData, 0, nullptr, &localAppData)) &&
-                    localAppData != nullptr)
+                if (wchar_t* downloads = nullptr;
+                    SUCCEEDED(::SHGetKnownFolderPath(FOLDERID_Downloads, 0, nullptr, &downloads)) &&
+                    downloads != nullptr)
                 {
-                    targetDir = std::filesystem::path(localAppData) / L"TufScreenControl" / L"firmware";
-                    ::CoTaskMemFree(localAppData);
+                    // 用户默认下载文件夹，不写死路径
+                    targetDir = std::filesystem::path(downloads);
+                    ::CoTaskMemFree(downloads);
                 }
                 if (targetDir.empty())
                 {
-                    targetDir = std::filesystem::temp_directory_path() / L"TufScreenControl" / L"firmware";
+                    targetDir = std::filesystem::temp_directory_path();
                 }
                 const std::filesystem::path target = targetDir / fileName;
 
@@ -505,32 +579,70 @@ namespace ScreenControl::Ui
 
                 dialog.ShowAsync();
 
-                std::thread([bar, label, queue, dialog, root, url, target, targetDir, cancel]() mutable
+                std::thread([bar, label, queue, dialog, root, url, target, targetDir, cancel,
+                             sha256 = release.sha256]() mutable
                 {
-                    const bool ok = DownloadTo(url, target,
-                        [bar, label, queue, cancel](unsigned long long received, unsigned long long total)
+                    bool ok = false;
+                    for (int attempt = 1; attempt <= 3; ++attempt)
+                    {
+                        if (cancel->load())
                         {
-                            queue.TryEnqueue([bar, label, received, total, cancel]()
+                            break;
+                        }
+
+                        if (attempt > 1)
+                        {
+                            queue.TryEnqueue([label, attempt]()
                             {
-                                if (cancel->load())
-                                {
-                                    return;
-                                }
-                                if (total > 0)
-                                {
-                                    const double percent =
-                                        100.0 * static_cast<double>(received) / static_cast<double>(total);
-                                    bar.Value(percent);
-                                    label.Text(L"正在下载固件… " +
-                                               winrt::hstring(std::to_wstring(static_cast<int>(percent))) + L"%");
-                                }
-                                else
-                                {
-                                    label.Text(L"正在下载固件… " +
-                                               winrt::hstring(std::to_wstring(received / 1024)) + L" KB");
-                                }
+                                label.Text(L"正在重新下载固件…（第 " +
+                                           winrt::hstring(std::to_wstring(attempt)) + L" 次）");
                             });
-                        });
+                        }
+
+                        ok = DownloadTo(url, target,
+                            [bar, label, queue, cancel](unsigned long long received, unsigned long long total)
+                            {
+                                queue.TryEnqueue([bar, label, received, total, cancel]()
+                                {
+                                    if (cancel->load())
+                                    {
+                                        return;
+                                    }
+                                    if (total > 0)
+                                    {
+                                        const double percent =
+                                            100.0 * static_cast<double>(received) / static_cast<double>(total);
+                                        bar.Value(percent);
+                                        label.Text(L"正在下载固件… " +
+                                                   winrt::hstring(std::to_wstring(static_cast<int>(percent))) + L"%");
+                                    }
+                                    else
+                                    {
+                                        label.Text(L"正在下载固件… " +
+                                                   winrt::hstring(std::to_wstring(received / 1024)) + L" KB");
+                                    }
+                                });
+                            });
+
+                        if (!ok)
+                        {
+                            continue;
+                        }
+
+                        // 静默校验：接口给了 SHA-256 就比对，不一致则删除重下
+                        if (!sha256.empty())
+                        {
+                            const std::wstring actual = FileSha256(target);
+                            if (actual.empty() || _wcsicmp(actual.c_str(), sha256.c_str()) != 0)
+                            {
+                                std::error_code removeEc;
+                                std::filesystem::remove(target, removeEc);
+                                ok = false;
+                                continue;
+                            }
+                        }
+                        break;
+                    }
 
                     queue.TryEnqueue([dialog, root, ok, target, targetDir, cancel]()
                     {
@@ -575,11 +687,11 @@ namespace ScreenControl::Ui
         {
             using namespace winrt::Microsoft::UI::Xaml::Controls;
 
-            std::wstring message = L"新固件已发布，是否下载。\n版本 ";
+            std::wstring message = L"新固件已发布，是否下载？\n版本 ";
             message += std::to_wstring(release.version);
             message += L"，大小 ";
             message += release.fileSize;
-            message += L"，";
+            message += L"。";
 
             ContentDialog dialog;
             dialog.XamlRoot(root);

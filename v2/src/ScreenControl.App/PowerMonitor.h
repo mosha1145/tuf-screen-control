@@ -38,6 +38,9 @@ namespace ScreenControl
             /// 额外监听的注册消息（例如单实例激活），0 表示不监听
             UINT activateMessage = 0;
             Handler activate;
+
+            /// 设备插拔（WM_DEVICECHANGE）：用于重新枚举水冷屏，无需重启软件。
+            Handler deviceChanged;
         };
 
         PowerMonitor() = default;
