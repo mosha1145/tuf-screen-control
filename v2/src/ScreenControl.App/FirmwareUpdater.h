@@ -20,6 +20,8 @@
 #include <fstream>
 #include <filesystem>
 #include <memory>
+#include <sstream>
+#include <algorithm>
 
 #include <shlobj.h>
 #include <shellapi.h>
@@ -76,10 +78,18 @@ namespace ScreenControl::Ui
             return out;
         }
 
-        /// 同步 HTTP GET，返回原始响应体（UTF-8）。失败返回空串。
-        inline std::string HttpGet(std::wstring const& host, std::wstring const& path)
+        /// 同步 HTTP GET 的详细结果，便于定位失败原因。
+        struct HttpResult
         {
             std::string body;
+            DWORD status = 0;   ///< HTTP 状态码
+            DWORD error = 0;    ///< 首个失败的 Win32 错误码
+        };
+
+        /// 同步 HTTP GET。失败时 body 为空，error/status 说明原因。
+        inline HttpResult HttpGetEx(std::wstring const& host, std::wstring const& path)
+        {
+            HttpResult result;
 
             HINTERNET session = ::WinHttpOpen(L"TUF Screen Control/1.0",
                                               WINHTTP_ACCESS_TYPE_DEFAULT_PROXY,
@@ -87,7 +97,8 @@ namespace ScreenControl::Ui
                                               WINHTTP_NO_PROXY_BYPASS, 0);
             if (session == nullptr)
             {
-                return body;
+                result.error = ::GetLastError();
+                return result;
             }
 
             // WinHTTP 默认不启用 TLS 1.2，访问 ASUS（仅 HTTPS）会直接失败。
@@ -95,9 +106,18 @@ namespace ScreenControl::Ui
             ::WinHttpSetOption(session, WINHTTP_OPTION_SECURE_PROTOCOLS,
                                &protocols, sizeof(protocols));
 
-            // 部分 CDN 对空 User-Agent 返回 403，这里显式补上。
-            ::WinHttpSetOption(session, WINHTTP_OPTION_USER_AGENT,
-                               const_cast<wchar_t*>(L"TUF Screen Control/1.0"), 0);
+            // 关键：服务器可能 302 到区域站点，WinHTTP 默认不跟随重定向。
+            DWORD redirect = WINHTTP_OPTION_REDIRECT_POLICY_ALWAYS;
+            ::WinHttpSetOption(session, WINHTTP_OPTION_REDIRECT_POLICY,
+                               &redirect, sizeof(redirect));
+
+            // 关键：服务器可能返回 gzip，默认不自动解压 -> JSON 解析失败。
+            DWORD decompress = WINHTTP_DECOMPRESSION_FLAG_ALL;
+            ::WinHttpSetOption(session, WINHTTP_OPTION_DECOMPRESSION,
+                               &decompress, sizeof(decompress));
+
+            int timeoutMs = 15000;
+            ::WinHttpSetTimeouts(session, timeoutMs, timeoutMs, timeoutMs, timeoutMs);
 
             if (HINTERNET connect = ::WinHttpConnect(session, host.c_str(),
                                                      INTERNET_DEFAULT_HTTPS_PORT, 0))
@@ -109,12 +129,32 @@ namespace ScreenControl::Ui
                     const BOOL sent = ::WinHttpSendRequest(request,
                                                            WINHTTP_NO_ADDITIONAL_HEADERS, 0,
                                                            WINHTTP_NO_REQUEST_DATA, 0, 0, 0);
-                    if (sent && ::WinHttpReceiveResponse(request, nullptr))
+                    if (!sent)
                     {
+                        result.error = ::GetLastError();
+                    }
+                    else if (!::WinHttpReceiveResponse(request, nullptr))
+                    {
+                        result.error = ::GetLastError();
+                    }
+                    else
+                    {
+                        DWORD statusCode = 0;
+                        DWORD statusSize = sizeof(statusCode);
+                        ::WinHttpQueryHeaders(request, WINHTTP_QUERY_STATUS_CODE | WINHTTP_QUERY_FLAG_NUMBER,
+                                              WINHTTP_HEADER_NAME_BY_INDEX, &statusCode,
+                                              &statusSize, WINHTTP_NO_HEADER_INDEX);
+                        result.status = statusCode;
+
                         for (;;)
                         {
                             DWORD available = 0;
-                            if (!::WinHttpQueryDataAvailable(request, &available) || available == 0)
+                            if (!::WinHttpQueryDataAvailable(request, &available))
+                            {
+                                result.error = ::GetLastError();
+                                break;
+                            }
+                            if (available == 0)
                             {
                                 break;
                             }
@@ -122,18 +162,81 @@ namespace ScreenControl::Ui
                             DWORD read = 0;
                             if (!::WinHttpReadData(request, chunk.data(), available, &read))
                             {
+                                result.error = ::GetLastError();
                                 break;
                             }
-                            body.append(chunk.data(), read);
+                            result.body.append(chunk.data(), read);
                         }
                     }
                     ::WinHttpCloseHandle(request);
                 }
+                else
+                {
+                    result.error = ::GetLastError();
+                }
                 ::WinHttpCloseHandle(connect);
+            }
+            else
+            {
+                result.error = ::GetLastError();
             }
 
             ::WinHttpCloseHandle(session);
-            return body;
+            return result;
+        }
+
+        /// 同步 HTTP GET，返回原始响应体（UTF-8）。失败返回空串。
+        inline std::string HttpGet(std::wstring const& host, std::wstring const& path)
+        {
+            return HttpGetEx(host, path).body;
+        }
+
+        /// 拉取官方最新固件信息（定义见下方）。
+        inline FirmwareRelease FetchLatest();
+
+        /// 诊断模式：把接口结果写到 %LOCALAPPDATA%\TufScreenControl\update.log。
+        /// 用 `TufScreenControl.exe --check-update` 触发，排查网络/解析问题。
+        inline void RunSelfTest()
+        {
+            std::wstring folder;
+            if (wchar_t* localAppData = nullptr;
+                SUCCEEDED(::SHGetKnownFolderPath(FOLDERID_LocalAppData, 0, nullptr, &localAppData)) &&
+                localAppData != nullptr)
+            {
+                folder = localAppData;
+                ::CoTaskMemFree(localAppData);
+            }
+            if (folder.empty())
+            {
+                folder = std::filesystem::temp_directory_path().wstring();
+            }
+            const std::filesystem::path logPath =
+                std::filesystem::path(folder) / L"TufScreenControl" / L"update.log";
+
+            std::error_code ec;
+            std::filesystem::create_directories(logPath.parent_path(), ec);
+
+            std::wostringstream log;
+            const auto http = HttpGetEx(kApiHost, kApiPath);
+            log << L"GET " << kApiHost << kApiPath << L"\n";
+            log << L"status=" << http.status << L" error=" << http.error
+                << L" bodyLen=" << http.body.size() << L"\n";
+
+            if (!http.body.empty())
+            {
+                std::wstring preview(http.body.begin(),
+                                     http.body.begin() + (std::min)(http.body.size(), std::size_t{ 400 }));
+                log << L"body=" << preview << L"\n";
+            }
+
+            const FirmwareRelease release = FetchLatest();
+            log << L"parsed: found=" << (release.found ? 1 : 0)
+                << L" version=" << release.version
+                << L" fileSize=" << release.fileSize
+                << L" url=" << release.downloadUrl << L"\n";
+
+            std::wofstream out(logPath, std::ios::trunc);
+            out << log.str();
         }
 
         /// 拉取官方最新固件信息。网络失败或解析失败时返回 found == false。
@@ -161,7 +264,28 @@ namespace ScreenControl::Ui
             }
 
             const auto& file = files.items.front();
-            release.version = file[L"Version"].AsInt(0);
+
+            // 注意：接口把 Version 返回成【字符串】（"51"），不是数字。
+            // Value::AsInt 只对数字类型生效，直接用它会被解析成 0。
+            const auto& versionValue = file[L"Version"];
+            int version = 0;
+            if (versionValue.IsNumber())
+            {
+                version = static_cast<int>(versionValue.number);
+            }
+            else if (versionValue.IsString())
+            {
+                try
+                {
+                    version = std::stoi(versionValue.text);
+                }
+                catch (...)
+                {
+                    version = 0;
+                }
+            }
+
+            release.version = version;
             release.fileSize = file[L"FileSize"].AsString(L"未知");
             release.title = file[L"Title"].AsString(L"");
             release.downloadUrl = file[L"DownloadUrl"][L"China"].AsString(L"");
@@ -381,7 +505,7 @@ namespace ScreenControl::Ui
 
                 dialog.ShowAsync();
 
-                std::thread([bar, label, queue, dialog, url, target, targetDir, cancel]() mutable
+                std::thread([bar, label, queue, dialog, root, url, target, targetDir, cancel]() mutable
                 {
                     const bool ok = DownloadTo(url, target,
                         [bar, label, queue, cancel](unsigned long long received, unsigned long long total)
@@ -408,7 +532,7 @@ namespace ScreenControl::Ui
                             });
                         });
 
-                    queue.TryEnqueue([dialog, ok, target, targetDir, cancel]()
+                    queue.TryEnqueue([dialog, root, ok, target, targetDir, cancel]()
                     {
                         if (cancel->load())
                         {
@@ -417,7 +541,7 @@ namespace ScreenControl::Ui
                         dialog.Hide();
 
                         ContentDialog done;
-                        done.XamlRoot(dialog.XamlRoot());
+                        done.XamlRoot(root);
                         done.Title(winrt::box_value(L"固件更新"));
                         if (ok)
                         {

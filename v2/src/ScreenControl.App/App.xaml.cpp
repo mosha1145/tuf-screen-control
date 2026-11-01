@@ -3,6 +3,7 @@
 #include "MainWindow.h"
 
 #include "AppConfig.h"
+#include "FirmwareUpdater.h"
 #include "NativeTheme.h"
 
 #include <filesystem>
@@ -109,6 +110,14 @@ namespace winrt::ScreenControl::implementation
 
     void App::OnLaunched([[maybe_unused]] LaunchActivatedEventArgs const& e)
     {
+        // 诊断模式：TufScreenControl.exe --check-update
+        // 不创建界面，直接把固件接口的结果写到 update.log，便于排查。
+        if (std::wstring(::GetCommandLineW()).find(L"--check-update") != std::wstring::npos)
+        {
+            ::ScreenControl::Ui::Firmware::RunSelfTest();
+            ::ExitProcess(0);
+        }
+
         // 单实例：已有实例在运行时，通知它把窗口叫出来，然后本进程直接退出。
         if (!m_singleInstance.Acquire(L"TufScreenControl"))
         {
