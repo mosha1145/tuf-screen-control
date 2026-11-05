@@ -163,6 +163,14 @@ nav.Content(m_contentFrame);
         m_theme = ::ScreenControl::NativeTheme::Parse(::ScreenControl::Ui::Config().Data().appTheme);
         ApplyTheme(m_theme, false);
 
+        // 首帧底色：WinUI 3 的窗口在 XAML 合成完成前就会由 DWM 上屏，
+        // 这一帧用的是平台默认背景（深色下黑、浅色下白），也就是"闪黑/闪白"。
+        // 平台没有"内容就绪再显示"的 API，所以只能让首帧的底色就是页面底色：
+        // 这里在 Activate() 之前把根容器设成官方页面背景画刷，
+        // 页面渲染出来后（见下面的 Loaded）再撤掉，恢复 Mica。
+        root.Background(Application::Current().Resources()
+                            .Lookup(box_value(L"ApplicationPageBackgroundThemeBrush")).as<Brush>());
+
         // 恢复上次的显示参数与屏幕开关状态
         ApplyPersistedDeviceState();
 
@@ -175,13 +183,21 @@ nav.Content(m_contentFrame);
         // 首次导航放到窗口完成第一次布局之后。
         // 在构造函数里导航时 Frame 还是 0×0、窗口未显示，
         // EntranceNavigationTransitionInfo 没有可播放的目标，冷启动就没有入场动画。
-        root.Loaded([this, nav, itemDisplay](auto&&, auto&&)
+        root.Loaded([this, nav, itemDisplay, root](auto&&, auto&&)
         {
             if (!m_initialNavigationDone)
             {
                 m_initialNavigationDone = true;
                 // 触发 SelectionChanged -> Frame.Navigate(Entrance...)
                 nav.SelectedItem(itemDisplay);
+
+                // 新页面已经进入可视树、开始播入场动画，
+                // 此时撤掉首帧底色，让 Mica 背衬恢复显示。
+                if (auto queue = DispatcherQueue())
+                {
+                    queue.TryEnqueue(winrt::Microsoft::UI::Dispatching::DispatcherQueuePriority::Low,
+                                     [root]() { root.Background(nullptr); });
+                }
             }
 
             // 固件更新检查：此时 XamlRoot 才可用
