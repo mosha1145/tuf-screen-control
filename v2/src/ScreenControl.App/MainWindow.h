@@ -98,6 +98,8 @@ namespace winrt::ScreenControl::implementation
 
         bool m_trayAvailable = false;
         bool m_firstNavigateDone = false;
+        /// 首次导航是否已完成（放到窗口 Loaded 之后执行）
+        bool m_initialNavigationDone = false;
         bool m_exiting = false;
         bool m_closePromptOpen = false;
     };

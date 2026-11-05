@@ -159,8 +159,6 @@ nav.Content(m_contentFrame);
 
         SetupBackdropAndTitleBar();
 
-        // 首次导航：直接选中主控项（官方标准做法，不叠加任何额外动画代码）
-        nav.SelectedItem(itemDisplay);
         // 启动时按配置恢复主题（含「跟随系统」）。
         m_theme = ::ScreenControl::NativeTheme::Parse(::ScreenControl::Ui::Config().Data().appTheme);
         ApplyTheme(m_theme, false);
@@ -174,9 +172,19 @@ nav.Content(m_contentFrame);
         // 托盘图标 + 关闭行为（隐藏到托盘 / 退出 / 询问）
         SetupTrayAndCloseBehavior();
 
-        // 窗口第一次完成布局后再做固件更新检查（此时 XamlRoot 可用）
-        root.Loaded([this](auto&&, auto&&)
+        // 首次导航放到窗口完成第一次布局之后。
+        // 在构造函数里导航时 Frame 还是 0×0、窗口未显示，
+        // EntranceNavigationTransitionInfo 没有可播放的目标，冷启动就没有入场动画。
+        root.Loaded([this, nav, itemDisplay](auto&&, auto&&)
         {
+            if (!m_initialNavigationDone)
+            {
+                m_initialNavigationDone = true;
+                // 触发 SelectionChanged -> Frame.Navigate(Entrance...)
+                nav.SelectedItem(itemDisplay);
+            }
+
+            // 固件更新检查：此时 XamlRoot 才可用
             MaybeCheckFirmwareUpdate();
         });
     }
