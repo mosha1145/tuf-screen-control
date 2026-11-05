@@ -175,40 +175,13 @@ nav.Content(m_contentFrame);
         // 首次导航放到窗口完成第一次布局之后。
         // 在构造函数里导航时 Frame 还是 0×0、窗口未显示，
         // EntranceNavigationTransitionInfo 没有可播放的目标，冷启动就没有入场动画。
-        root.Loaded([this, nav, itemDisplay, root](auto&&, auto&&)
+        root.Loaded([this, nav, itemDisplay](auto&&, auto&&)
         {
             if (!m_initialNavigationDone)
             {
                 m_initialNavigationDone = true;
-
-                // 消除冷启动黑帧：首次导航前 Frame 是空的，
-                // 而 DisplayPage 构造（扫素材目录、枚举设备）要花时间，
-                // 这段空窗期露出的就是黑色底。先铺一层主题实色底，
-                // 等入场动画播完再撤掉，恢复 Mica 背衬。
-                root.Background(Media::SolidColorBrush{
-                    ::ScreenControl::NativeTheme::ResolveIsDark(m_theme)
-                        ? Windows::UI::ColorHelper::FromArgb(0xFF, 0x20, 0x20, 0x20)
-                        : Windows::UI::ColorHelper::FromArgb(0xFF, 0xF3, 0xF3, 0xF3) });
-
+                // 触发 SelectionChanged -> Frame.Navigate(Entrance...)
                 nav.SelectedItem(itemDisplay);
-
-                if (auto queue = DispatcherQueue())
-                {
-                    auto timer = queue.CreateTimer();
-                    timer.Interval(std::chrono::milliseconds(400));
-                    timer.IsRepeating(false);
-                    timer.Tick([root, timer](auto const&, auto const&) mutable
-                    {
-                        // 动画结束：撤掉实色底，让 Mica 显示出来
-                        root.Background(nullptr);
-                        timer.Stop();
-                    });
-                    timer.Start();
-                }
-                else
-                {
-                    root.Background(nullptr);
-                }
             }
 
             // 固件更新检查：此时 XamlRoot 才可用
