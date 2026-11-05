@@ -270,7 +270,13 @@ namespace winrt::ScreenControl::implementation
         MainWindow::Current()->AttachPreview(m_previewSource, m_previewPlaceholder);
         MainWindow::Current()->AttachStatusText(m_statusText);
         MainWindow::Current()->AttachDeviceText(m_deviceText);
-        Content(MakeScrollable(page));
+
+        // 页面入场动画：给内容根节点挂 EntranceThemeTransition，
+        // 元素进入可视树时自动播放"淡入 + 从底部上浮"（与参考项目一致）。
+        auto contentRoot = MakeScrollable(page);
+        contentRoot.Transitions().Append(
+            Microsoft::UI::Xaml::Media::Animation::EntranceThemeTransition{});
+        Content(contentRoot);
     }
 
     void DisplayPage::OnNavigatedFrom(Microsoft::UI::Xaml::Navigation::NavigationEventArgs const&)

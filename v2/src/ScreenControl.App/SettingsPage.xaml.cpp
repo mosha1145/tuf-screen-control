@@ -493,7 +493,12 @@ namespace winrt::ScreenControl::implementation
                 });
             }).detach();
         });
-        Content(MakeScrollable(page));
+
+        // 页面入场动画：与主控页一致，内容根节点挂 EntranceThemeTransition
+        auto contentRoot = MakeScrollable(page);
+        contentRoot.Transitions().Append(
+            Microsoft::UI::Xaml::Media::Animation::EntranceThemeTransition{});
+        Content(contentRoot);
     }
 
     void SettingsPage::OnNavigatedFrom(Microsoft::UI::Xaml::Navigation::NavigationEventArgs const&)
