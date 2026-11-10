@@ -20,16 +20,10 @@
         <!--
             分组结构（关键）：
             根 StackPanel 的每个子元素 = 一个「分组整体」（标题 + 若干卡片）。
-            配合 RepositionThemeTransition，展开/收起折叠卡时是整段被推拉，
+            栏间位移交给 Expander 自身的高度动画（逐帧布局），不加 Reposition 才不会与展开动画叠压。
             而不是组内每个控件各自移动（那样会在动画中互相堆叠）。
         -->
         <StackPanel Margin="24,8,24,24" Spacing="0">
-
-            <StackPanel.ChildrenTransitions>
-                <TransitionCollection>
-                    <RepositionThemeTransition />
-                </TransitionCollection>
-            </StackPanel.ChildrenTransitions>
 
             <TextBlock Text="设置" Style="{StaticResource PageTitleStyle}" />
 

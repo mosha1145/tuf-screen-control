@@ -13,6 +13,7 @@
 #include "SingleInstance.h"
 
 #include <memory>
+#include <winrt/Windows.Graphics.Imaging.h>
 
 namespace ScreenControl::Core { class PlaybackController; }
 
@@ -92,6 +93,10 @@ namespace winrt::ScreenControl::implementation
         winrt::Microsoft::UI::Xaml::Controls::TextBlock m_deviceText{ nullptr };
         winrt::Microsoft::UI::Xaml::Media::Imaging::SoftwareBitmapSource m_previewSource{ nullptr };
         winrt::Microsoft::UI::Xaml::Controls::TextBlock m_previewPlaceholder{ nullptr };
+        /// 预览复用位图：避免每帧新建 SoftwareBitmap（内存持续增长的主因）
+        winrt::Windows::Graphics::Imaging::SoftwareBitmap m_previewBitmap{ nullptr };
+        /// 上一帧是否还在渲染，未完成则丢弃新帧，避免异步任务积压
+        bool m_previewPending = false;
         std::wstring m_currentTag{ L"" };
         ::ScreenControl::PowerMonitor m_powerMonitor;
         ::ScreenControl::TrayIcon m_trayIcon;

@@ -876,6 +876,13 @@ nav.Content(m_contentFrame);
             return;
         }
 
+        // 上一帧还没渲染完就丢弃本帧：SetBitmapAsync 是异步的，帧率高于渲染时会积压，
+        // 造成内存持续上涨（播放视频时尤其明显）。
+        if (m_previewPending)
+        {
+            return;
+        }
+
         try
         {
             Windows::Storage::Streams::InMemoryRandomAccessStream stream;
@@ -883,14 +890,26 @@ nav.Content(m_contentFrame);
             writer.WriteBytes(pixels);
             const auto buffer = writer.DetachBuffer();
 
-            const auto bitmap = Windows::Graphics::Imaging::SoftwareBitmap::CreateCopyFromBuffer(
-                buffer,
-                Windows::Graphics::Imaging::BitmapPixelFormat::Bgra8,
-                width,
-                height,
-                Windows::Graphics::Imaging::BitmapAlphaMode::Premultiplied);
+            // 复用同一张 SoftwareBitmap：只拷贝像素，不再每帧分配新对象
+            if (!m_previewBitmap ||
+                m_previewBitmap.PixelWidth() != width ||
+                m_previewBitmap.PixelHeight() != height)
+            {
+                m_previewBitmap = Windows::Graphics::Imaging::SoftwareBitmap::CreateCopyFromBuffer(
+                    buffer,
+                    Windows::Graphics::Imaging::BitmapPixelFormat::Bgra8,
+                    width,
+                    height,
+                    Windows::Graphics::Imaging::BitmapAlphaMode::Premultiplied);
+            }
+            else
+            {
+                m_previewBitmap.CopyFromBuffer(buffer);
+            }
 
-            m_previewSource.SetBitmapAsync(bitmap);
+            m_previewPending = true;
+            auto operation = m_previewSource.SetBitmapAsync(m_previewBitmap);
+            operation.Completed([this](auto const&, auto const&) { m_previewPending = false; });
 
             if (m_previewPlaceholder)
             {
@@ -936,5 +955,7 @@ nav.Content(m_contentFrame);
         m_deviceText = nullptr;
         m_previewSource = nullptr;
         m_previewPlaceholder = nullptr;
+        m_previewBitmap = nullptr;
+        m_previewPending = false;
     }
 }
