@@ -38,7 +38,7 @@
                 <TextBlock Text="应用行为" Style="{StaticResource SectionTitleStyle}" />
 
                 <Border Style="{StaticResource SettingsRowCardStyle}">
-                    <Grid>
+                    <Grid ColumnSpacing="16">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="*" />
@@ -61,7 +61,7 @@
                 </Border>
 
                 <Border Style="{StaticResource SettingsRowCardStyle}">
-                    <Grid>
+                    <Grid ColumnSpacing="16">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="*" />
@@ -84,7 +84,7 @@
 
                 <Expander Style="{StaticResource SettingsExpanderStyle}">
                     <Expander.Header>
-                        <Grid MinHeight="64">
+                        <Grid ColumnSpacing="16" MinHeight="64">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="Auto" />
                                 <ColumnDefinition Width="*" />
@@ -106,7 +106,7 @@
 
                 <Expander Style="{StaticResource SettingsExpanderStyle}">
                     <Expander.Header>
-                        <Grid MinHeight="64">
+                        <Grid ColumnSpacing="16" MinHeight="64">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="Auto" />
                                 <ColumnDefinition Width="*" />
@@ -131,7 +131,7 @@
                 <TextBlock Text="屏幕设置" Style="{StaticResource SectionTitleStyle}" />
 
                 <Border Style="{StaticResource SettingsRowCardStyle}">
-                    <Grid>
+                    <Grid ColumnSpacing="16">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="*" />
@@ -141,7 +141,7 @@
 
                         <FontIcon Glyph="&#xE708;" Style="{StaticResource SettingRowIconStyle}" />
 
-                        <StackPanel Grid.Column="1" Spacing="2" Margin="16,0,0,0" VerticalAlignment="Center">
+                        <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
                             <TextBlock Text="睡眠模式" />
                             <TextBlock Text="无内容播放时关闭屏幕" Style="{StaticResource SettingRowSmallTextStyle}" />
                         </StackPanel>
@@ -164,7 +164,7 @@
                 <TextBlock Text="更新" Style="{StaticResource SectionTitleStyle}" />
 
                 <Border Style="{StaticResource SettingsRowCardStyle}">
-                    <Grid>
+                    <Grid ColumnSpacing="16">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="*" />
@@ -174,7 +174,7 @@
 
                         <FontIcon Glyph="&#xE895;" Style="{StaticResource SettingRowIconStyle}" />
 
-                        <StackPanel Grid.Column="1" Spacing="2" Margin="16,0,0,0" VerticalAlignment="Center">
+                        <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
                             <TextBlock Text="自动检测更新" />
                             <TextBlock x:Name="UpdateDesc" Text="固件版本" Style="{StaticResource SettingRowSmallTextStyle}" />
                         </StackPanel>
@@ -193,7 +193,7 @@
 
                 <Expander Style="{StaticResource SettingsExpanderStyle}">
                     <Expander.Header>
-                        <Grid MinHeight="64">
+                        <Grid ColumnSpacing="16" MinHeight="64">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="Auto" />
                                 <ColumnDefinition Width="*" />

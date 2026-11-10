@@ -69,9 +69,9 @@
                 <Setter Property="VerticalAlignment" Value="Center" />
             </Style>
 
+            <!-- 行内间距统一由父 Grid 的 ColumnSpacing 提供（官方 SettingsCard 范式） -->
             <Style x:Key="SettingRowTitleStyle" TargetType="TextBlock">
                 <Setter Property="VerticalAlignment" Value="Center" />
-                <Setter Property="Margin" Value="16,0,0,0" />
             </Style>
 
             <Style x:Key="SettingRowSmallTextStyle" TargetType="TextBlock">
@@ -82,7 +82,6 @@
             <Style x:Key="SettingRowStatusStyle" TargetType="TextBlock">
                 <Setter Property="FontSize" Value="14" />
                 <Setter Property="VerticalAlignment" Value="Center" />
-                <Setter Property="Margin" Value="0,0,12,0" />
             </Style>
 
             <Style x:Key="SettingRowValueStyle" TargetType="TextBlock">
