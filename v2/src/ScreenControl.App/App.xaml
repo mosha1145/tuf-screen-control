@@ -57,7 +57,7 @@
             <Style x:Key="SectionTitleStyle" TargetType="TextBlock">
                 <Setter Property="FontSize" Value="14" />
                 <Setter Property="FontWeight" Value="SemiBold" />
-                <Setter Property="Margin" Value="2,24,0,0" />
+                <Setter Property="Margin" Value="2,16,0,6" />
             </Style>
 
             <!-- ============ 设置行 ============ -->
