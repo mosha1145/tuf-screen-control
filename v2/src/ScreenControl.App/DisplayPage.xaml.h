@@ -6,7 +6,6 @@ namespace winrt::ScreenControl::implementation
     struct DisplayPage : DisplayPageT<DisplayPage>
     {
         DisplayPage();
-        ~DisplayPage();
         void OnNavigatedFrom(Microsoft::UI::Xaml::Navigation::NavigationEventArgs const& e);
     private:
         winrt::Microsoft::UI::Xaml::Media::Imaging::SoftwareBitmapSource m_previewSource{ nullptr };

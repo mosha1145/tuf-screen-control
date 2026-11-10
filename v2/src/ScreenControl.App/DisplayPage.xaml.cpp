@@ -2,7 +2,6 @@
 #include "DisplayPage.xaml.h"
 #include "UiHelpers.h"
 #include "PlaybackController.h"
-#include "PageTracker.h"
 #if __has_include("DisplayPage.g.cpp")
 #include "DisplayPage.g.cpp"
 #endif
@@ -20,8 +19,6 @@ namespace winrt::ScreenControl::implementation
     DisplayPage::DisplayPage()
     {
         InitializeComponent();
-        ::ScreenControl::TrackPage(L"Display", 1);
-
         // 页面缓存：切换页面时复用同一实例，避免每次重建整棵 UI 树（内存持续上涨的主因）
         NavigationCacheMode(Microsoft::UI::Xaml::Navigation::NavigationCacheMode::Required);
 
@@ -145,17 +142,10 @@ namespace winrt::ScreenControl::implementation
         MainWindow::Current()->AttachDeviceText(m_deviceText);
     }
 
-    DisplayPage::~DisplayPage()
-    {
-        ::ScreenControl::TrackPage(L"Display", -1);
-    }
 
     void DisplayPage::OnNavigatedFrom(Microsoft::UI::Xaml::Navigation::NavigationEventArgs const&)
     {
         MainWindow::Current()->DetachPageUi();
-
-        // 页面已开启 NavigationCacheMode.Required（复用实例），
-        // 因此这里不能清空 Content，否则再次进入时页面是空白的。
-        // 只需断开主窗口对页面控件的引用即可。
+        // 页面已开启缓存，不能清空 Content（否则再次进入是空白页）
     }
 }
