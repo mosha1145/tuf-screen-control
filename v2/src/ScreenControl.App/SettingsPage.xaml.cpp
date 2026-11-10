@@ -4,121 +4,24 @@
 #include "PlaybackController.h"
 #include "ScreenController.h"
 #include "FirmwareUpdater.h"
-#include <thread>
-#include <winrt/Microsoft.UI.Xaml.Media.Animation.h>
 #if __has_include("SettingsPage.g.cpp")
 #include "SettingsPage.g.cpp"
 #endif
+
+#include <thread>
+
 using namespace winrt;
 using namespace Microsoft::UI::Xaml;
 using namespace Microsoft::UI::Xaml::Controls;
 using namespace Microsoft::UI::Xaml::Media;
 using namespace ::ScreenControl::Ui;
+
 namespace winrt::ScreenControl::implementation
 {
-    SettingsPage::SettingsPage()
+    namespace
     {
-        InitializeComponent();
-
-        StackPanel page;
-        page.Spacing(4);
-        page.Margin(Thickness{ 24, 8, 24, 24 });
-
-        page.Children().Append(MakeTitle(L"设置"));
-
-        // 开机自启动：左侧文本、右侧开关。
-        // 开关旁不再用 OnContent/OffContent（它们渲染在开关右侧），
-        // 改为在开关左侧放"开/关"文字，垂直居中对齐。
-        ToggleSwitch autoStart;
-        autoStart.MinWidth(0);
-        // 清空默认的 On/Off 文本，只保留左侧自己画的状态文字
-        autoStart.OnContent(box_value(L""));
-        autoStart.OffContent(box_value(L""));
-        autoStart.VerticalAlignment(VerticalAlignment::Center);
-        autoStart.HorizontalAlignment(HorizontalAlignment::Right);
-
-        Grid autoStartRow;
-        autoStartRow.ColumnDefinitions().Append([] { ColumnDefinition c; c.Width(GridLengthHelper::Auto()); return c; }());
-        autoStartRow.ColumnDefinitions().Append([] { ColumnDefinition c; c.Width(GridLengthHelper::FromValueAndType(1, GridUnitType::Star)); return c; }());
-        autoStartRow.ColumnDefinitions().Append([] { ColumnDefinition c; c.Width(GridLengthHelper::Auto()); return c; }());
-        autoStartRow.ColumnDefinitions().Append([] { ColumnDefinition c; c.Width(GridLengthHelper::Auto()); return c; }());
-
-        FontIcon autoStartIcon;
-        autoStartIcon.Glyph(L"\xE7E8");
-        autoStartIcon.FontSize(16);
-        autoStartIcon.VerticalAlignment(VerticalAlignment::Center);
-        Grid::SetColumn(autoStartIcon, 0);
-        autoStartRow.Children().Append(autoStartIcon);
-
-        TextBlock autoStartLabel;
-        autoStartLabel.Text(L"开机自启动");
-        autoStartLabel.VerticalAlignment(VerticalAlignment::Center);
-        autoStartLabel.Margin(Thickness{ 16, 0, 0, 0 });
-        Grid::SetColumn(autoStartLabel, 1);
-        autoStartRow.Children().Append(autoStartLabel);
-
-        TextBlock autoStartStatus;
-        autoStartStatus.FontSize(14);
-        autoStartStatus.Text(autoStart.IsOn() ? L"开" : L"关");
-        autoStartStatus.VerticalAlignment(VerticalAlignment::Center);
-        autoStartStatus.Margin(Thickness{ 0, 0, 12, 0 });
-        Grid::SetColumn(autoStartStatus, 2);
-        autoStartRow.Children().Append(autoStartStatus);
-
-        autoStart.Toggled([autoStartStatus](IInspectable const& sender, RoutedEventArgs const&)
-        {
-            if (auto control = sender.try_as<ToggleSwitch>())
-            {
-                autoStartStatus.Text(control.IsOn() ? L"开" : L"关");
-            }
-        });
-
-        Grid::SetColumn(autoStart, 3);
-        autoStartRow.Children().Append(autoStart);
-        // 关闭窗口时的行为（下拉选择，与开机自启动同一张卡）
-        Grid closeRow;
-        closeRow.ColumnDefinitions().Append([] { ColumnDefinition c; c.Width(GridLengthHelper::Auto()); return c; }());
-        closeRow.ColumnDefinitions().Append([] { ColumnDefinition c; c.Width(GridLengthHelper::FromValueAndType(1, GridUnitType::Star)); return c; }());
-        closeRow.ColumnDefinitions().Append([] { ColumnDefinition c; c.Width(GridLengthHelper::Auto()); return c; }());
-
-        FontIcon closeIcon;
-        closeIcon.Glyph(L"\xE8BB");
-        closeIcon.FontSize(16);
-        closeIcon.VerticalAlignment(VerticalAlignment::Center);
-        Grid::SetColumn(closeIcon, 0);
-        closeRow.Children().Append(closeIcon);
-
-        TextBlock closeLabel;
-        closeLabel.Text(L"关闭窗口时");
-        closeLabel.VerticalAlignment(VerticalAlignment::Center);
-        closeLabel.Margin(Thickness{ 16, 0, 0, 0 });
-        Grid::SetColumn(closeLabel, 1);
-        closeRow.Children().Append(closeLabel);
-
-        ComboBox closeChoice;
-        closeChoice.MinWidth(180);
-        closeChoice.VerticalAlignment(VerticalAlignment::Center);
-        closeChoice.Items().Append(box_value(L"隐藏到系统托盘"));
-        closeChoice.Items().Append(box_value(L"退出程序"));
-
-
-        auto const& closeConfig = ::ScreenControl::Ui::Config().Data();
-        closeChoice.SelectedIndex(closeConfig.closeAction == L"exit" ? 1 : 0);
-
-        closeChoice.SelectionChanged([this, closeChoice](IInspectable const&, SelectionChangedEventArgs const&)
-        {
-            const std::wstring value = closeChoice.SelectedIndex() == 1 ? L"exit" : L"tray";
-            auto& config = ::ScreenControl::Ui::Config().Data();
-            config.closeAction = value;
-            ::ScreenControl::Ui::Config().Save();
-        });
-
-        Grid::SetColumn(closeChoice, 2);
-        closeRow.Children().Append(closeChoice);
-
-        // 主题：参考系统设置页的做法 —— 可展开条目，标题行左侧图标 + 名称、
-        // 右侧显示当前选项；展开后三选一。顺序按参考图：浅色 / 深色 / 使用系统设置。
-        auto themeLabelOf = [](::ScreenControl::AppTheme value) -> wchar_t const*
+        /// 主题枚举 -> 界面文字
+        wchar_t const* ThemeLabelOf(::ScreenControl::AppTheme value)
         {
             switch (value)
             {
@@ -126,24 +29,43 @@ namespace winrt::ScreenControl::implementation
             case ::ScreenControl::AppTheme::Dark: return L"深色";
             default: return L"使用系统设置";
             }
-        };
+        }
+    }
 
-        TextBlock themeValue;
-        themeValue.FontSize(14);
-        themeValue.VerticalAlignment(VerticalAlignment::Center);
-        themeValue.Text(themeLabelOf(MainWindow::Current()->CurrentTheme()));
+    SettingsPage::SettingsPage()
+    {
+        InitializeComponent();
 
-        RadioButtons themeChoice;
-        themeChoice.Items().Append(box_value(L"浅色"));
-        themeChoice.Items().Append(box_value(L"深色"));
-        themeChoice.Items().Append(box_value(L"使用系统设置"));
+        auto& config = Config().Data();
 
-        // 先回显再挂事件，避免初始化时触发一次多余的应用。
-        themeChoice.SelectedIndex(
-            MainWindow::Current()->CurrentTheme() == ::ScreenControl::AppTheme::Light ? 0
-            : (MainWindow::Current()->CurrentTheme() == ::ScreenControl::AppTheme::Dark ? 1 : 2));
+        // ---------------- 开机自启动 ----------------
+        AutoStartStatus().Text(AutoStartSwitch().IsOn() ? L"开" : L"关");
+        AutoStartSwitch().Toggled([status = AutoStartStatus()](IInspectable const& sender, RoutedEventArgs const&)
+        {
+            if (auto control = sender.try_as<ToggleSwitch>())
+            {
+                status.Text(control.IsOn() ? L"开" : L"关");
+            }
+        });
 
-        themeChoice.SelectionChanged([this, themeValue, themeLabelOf](IInspectable const& sender, SelectionChangedEventArgs const&)
+        // ---------------- 关闭窗口时 ----------------
+        CloseChoice().SelectedIndex(config.closeAction == L"exit" ? 1 : 0);
+        CloseChoice().SelectionChanged([](IInspectable const& sender, SelectionChangedEventArgs const&)
+        {
+            if (auto box = sender.try_as<ComboBox>())
+            {
+                Config().Data().closeAction = box.SelectedIndex() == 1 ? L"exit" : L"tray";
+                Config().Save();
+            }
+        });
+
+        // ---------------- 应用主题 ----------------
+        const auto currentTheme = MainWindow::Current()->CurrentTheme();
+        ThemeValue().Text(ThemeLabelOf(currentTheme));
+        // 先回显再挂事件，避免初始化时触发一次多余的应用
+        ThemeChoice().SelectedIndex(currentTheme == ::ScreenControl::AppTheme::Light ? 0
+                                    : (currentTheme == ::ScreenControl::AppTheme::Dark ? 1 : 2));
+        ThemeChoice().SelectionChanged([value = ThemeValue()](IInspectable const& sender, SelectionChangedEventArgs const&)
         {
             auto radio = sender.try_as<RadioButtons>();
             if (!radio)
@@ -158,203 +80,67 @@ namespace winrt::ScreenControl::implementation
             default: theme = ::ScreenControl::AppTheme::System; break;
             }
             MainWindow::Current()->ApplyTheme(theme, true);
-            themeValue.Text(themeLabelOf(theme));
+            value.Text(ThemeLabelOf(theme));
         });
 
-
-        // 「常规」与「个性化」拆成两张卡：开机自启属于启动行为，主题属于外观，不应混在一起。
-        page.Children().Append(MakeSectionTitle(L"应用行为"));
-        page.Children().Append(MakeBehaviorCard(autoStartRow));
-        page.Children().Append(MakeBehaviorCard(closeRow));
-        page.Children().Append(MakeSectionTitle(L"个性化"));
-
-        // Expander 自身就是一张卡片，不再额外套一层 MakeCard，
-        // 否则会出现双层边框与多余内边距（也就是"多包了一层"）。
-        page.Children().Append(MakeSettingsCard(L"\xE706", L"应用主题", themeValue, themeChoice));
-
         // ---------------- 主题色 ----------------
-        auto& config = ::ScreenControl::Ui::Config().Data();
-
         auto colorLabelOf = [](std::wstring const& value) -> wchar_t const*
         {
             return value == L"tuf" ? L"TUF GAMING" : L"使用系统设置";
         };
 
-        TextBlock colorValue;
-        colorValue.FontSize(14);
-        colorValue.VerticalAlignment(VerticalAlignment::Center);
-        colorValue.Text(colorLabelOf(config.themeColor));
-
-
-        RadioButtons colorChoice;
-        colorChoice.Items().Append(box_value(L"TUF GAMING"));
-        colorChoice.Items().Append(box_value(L"使用系统设置"));
-        colorChoice.SelectedIndex(config.themeColor == L"tuf" ? 0 : 1);
-        colorChoice.SelectionChanged([this, colorValue, colorLabelOf](IInspectable const& sender, SelectionChangedEventArgs const&)
+        ThemeColorValue().Text(colorLabelOf(config.themeColor));
+        ThemeColorChoice().SelectedIndex(config.themeColor == L"tuf" ? 0 : 1);
+        ThemeColorChoice().SelectionChanged([value = ThemeColorValue()](IInspectable const& sender, SelectionChangedEventArgs const&)
         {
             auto radio = sender.try_as<RadioButtons>();
             if (!radio)
             {
                 return;
             }
-            const std::wstring value = radio.SelectedIndex() == 0 ? L"tuf" : L"system";
-            ::ScreenControl::Ui::Config().Data().themeColor = value;
-            ::ScreenControl::Ui::Config().Save();
-            colorValue.Text(colorLabelOf(value));
+            const std::wstring chosen = radio.SelectedIndex() == 0 ? L"tuf" : L"system";
+            Config().Data().themeColor = chosen;
+            Config().Save();
+            value.Text(chosen == L"tuf" ? L"TUF GAMING" : L"使用系统设置");
         });
 
-        page.Children().Append(MakeSettingsCard(L"\xE790", L"主题色", colorValue, colorChoice));
-
-// ---------------- 屏幕设置 ----------------
-        page.Children().Append(MakeSectionTitle(L"屏幕设置"));
-
-        ToggleSwitch sleepToggle;
-        sleepToggle.IsOn(config.sleepMode);
-        sleepToggle.MinWidth(0);
-        sleepToggle.OnContent(box_value(L""));
-        sleepToggle.OffContent(box_value(L""));
-        sleepToggle.VerticalAlignment(VerticalAlignment::Center);
-        sleepToggle.HorizontalAlignment(HorizontalAlignment::Right);
-
-        Grid sleepRow;
-        sleepRow.ColumnDefinitions().Append([] { ColumnDefinition c; c.Width(GridLengthHelper::Auto()); return c; }());
-        sleepRow.ColumnDefinitions().Append([] { ColumnDefinition c; c.Width(GridLengthHelper::FromValueAndType(1, GridUnitType::Star)); return c; }());
-        sleepRow.ColumnDefinitions().Append([] { ColumnDefinition c; c.Width(GridLengthHelper::Auto()); return c; }());
-        sleepRow.ColumnDefinitions().Append([] { ColumnDefinition c; c.Width(GridLengthHelper::Auto()); return c; }());
-
-        FontIcon sleepIcon;
-        sleepIcon.Glyph(L"\xE708");
-        sleepIcon.FontSize(16);
-        sleepIcon.Width(16);
-        sleepIcon.VerticalAlignment(VerticalAlignment::Center);
-        Grid::SetColumn(sleepIcon, 0);
-        sleepRow.Children().Append(sleepIcon);
-
-        StackPanel sleepText;
-        sleepText.Spacing(2);
-        sleepText.VerticalAlignment(VerticalAlignment::Center);
-        sleepText.Margin(Thickness{ 16, 0, 0, 0 });
-        TextBlock sleepTitle;
-        sleepTitle.Text(L"睡眠模式");
-        TextBlock sleepDesc;
-        sleepDesc.Text(L"无内容播放时关闭屏幕");
-        sleepDesc.FontSize(12);
-        // 不取 Application 资源里的 SecondaryBrush：那是按"应用主题"解析的，
-        // 页面实际主题与它不一致（跟随系统）时，浅色下会取到错误的颜色。
-        // 改用半透明默认前景，自动跟随元素自身主题。
-        sleepDesc.Opacity(0.6);
-        sleepText.Children().Append(sleepTitle);
-        sleepText.Children().Append(sleepDesc);
-        Grid::SetColumn(sleepText, 1);
-        sleepRow.Children().Append(sleepText);
-
-        TextBlock sleepStatus;
-        sleepStatus.FontSize(14);
-        sleepStatus.Text(config.sleepMode ? L"开" : L"关");
-        sleepStatus.VerticalAlignment(VerticalAlignment::Center);
-        sleepStatus.Margin(Thickness{ 0, 0, 12, 0 });
-        Grid::SetColumn(sleepStatus, 2);
-        sleepRow.Children().Append(sleepStatus);
-
-        sleepToggle.Toggled([sleepStatus](IInspectable const& sender, RoutedEventArgs const&)
+        // ---------------- 睡眠模式 ----------------
+        SleepToggle().IsOn(config.sleepMode);
+        SleepStatus().Text(config.sleepMode ? L"开" : L"关");
+        SleepToggle().Toggled([status = SleepStatus()](IInspectable const& sender, RoutedEventArgs const&)
         {
             if (auto control = sender.try_as<ToggleSwitch>())
             {
                 const bool on = control.IsOn();
-                ::ScreenControl::Ui::Config().Data().sleepMode = on;
-                ::ScreenControl::Ui::Config().Save();
-                sleepStatus.Text(on ? L"开" : L"关");
+                Config().Data().sleepMode = on;
+                Config().Save();
+                status.Text(on ? L"开" : L"关");
                 MainWindow::Current()->Player().SetSleepMode(on);
             }
         });
 
-        Grid::SetColumn(sleepToggle, 3);
-        sleepRow.Children().Append(sleepToggle);
-
-        page.Children().Append(MakeBehaviorCard(sleepRow));
-
         // ---------------- 自动检测更新 ----------------
-        page.Children().Append(MakeSectionTitle(L"更新"));
-
-        // 当前固件版本来自设备的 USB 硬件 ID（REV_xxxx）
         std::wstring firmware = ::ScreenControl::Device::ScreenController::FirmwareRevision();
         if (firmware.empty())
         {
             firmware = L"未知";
         }
+        UpdateDesc().Text(L"固件版本 " + firmware);
 
-        ToggleSwitch updateToggle;
-        updateToggle.IsOn(config.autoCheckUpdate);
-        updateToggle.OnContent(box_value(L""));
-        updateToggle.OffContent(box_value(L""));
-        updateToggle.MinWidth(0);
-        updateToggle.VerticalAlignment(VerticalAlignment::Center);
-        updateToggle.HorizontalAlignment(HorizontalAlignment::Right);
-
-        // 与「睡眠模式」完全相同的行结构，保证高度和右侧元素对齐一致
-        Grid updateHeader;
-        updateHeader.HorizontalAlignment(HorizontalAlignment::Stretch);
-        updateHeader.ColumnDefinitions().Append([] { ColumnDefinition c; c.Width(GridLengthHelper::Auto()); return c; }());
-        updateHeader.ColumnDefinitions().Append([] { ColumnDefinition c; c.Width(GridLengthHelper::FromValueAndType(1, GridUnitType::Star)); return c; }());
-        updateHeader.ColumnDefinitions().Append([] { ColumnDefinition c; c.Width(GridLengthHelper::Auto()); return c; }());
-        updateHeader.ColumnDefinitions().Append([] { ColumnDefinition c; c.Width(GridLengthHelper::Auto()); return c; }());
-
-        FontIcon updateIcon;
-        updateIcon.Glyph(L"\xE895");
-        updateIcon.FontSize(16);
-        updateIcon.Width(16);
-        updateIcon.VerticalAlignment(VerticalAlignment::Center);
-        Grid::SetColumn(updateIcon, 0);
-        updateHeader.Children().Append(updateIcon);
-
-        StackPanel updateText;
-        updateText.Spacing(2);
-        updateText.VerticalAlignment(VerticalAlignment::Center);
-        updateText.Margin(Thickness{ 16, 0, 0, 0 });
-        TextBlock updateTitle;
-        updateTitle.Text(L"自动检测更新");
-        TextBlock updateDesc;
-        updateDesc.Text(L"固件版本 " + firmware);
-        updateDesc.FontSize(12);
-        updateDesc.Opacity(0.6);
-        updateText.Children().Append(updateTitle);
-        updateText.Children().Append(updateDesc);
-        Grid::SetColumn(updateText, 1);
-        updateHeader.Children().Append(updateText);
-
-        TextBlock updateStatus;
-        updateStatus.FontSize(14);
-        updateStatus.Text(config.autoCheckUpdate ? L"开" : L"关");
-        updateStatus.VerticalAlignment(VerticalAlignment::Center);
-        updateStatus.Margin(Thickness{ 0, 0, 12, 0 });
-        Grid::SetColumn(updateStatus, 2);
-        updateHeader.Children().Append(updateStatus);
-
-        updateToggle.Toggled([updateStatus](IInspectable const& sender, RoutedEventArgs const&)
+        UpdateToggle().IsOn(config.autoCheckUpdate);
+        UpdateStatus().Text(config.autoCheckUpdate ? L"开" : L"关");
+        UpdateToggle().Toggled([status = UpdateStatus()](IInspectable const& sender, RoutedEventArgs const&)
         {
             if (auto control = sender.try_as<ToggleSwitch>())
             {
                 const bool on = control.IsOn();
-                ::ScreenControl::Ui::Config().Data().autoCheckUpdate = on;
-                ::ScreenControl::Ui::Config().Save();
-                updateStatus.Text(on ? L"开" : L"关");
+                Config().Data().autoCheckUpdate = on;
+                Config().Save();
+                status.Text(on ? L"开" : L"关");
             }
         });
 
-        Grid::SetColumn(updateToggle, 3);
-        updateHeader.Children().Append(updateToggle);
-
-        page.Children().Append(MakeBehaviorCard(updateHeader));
-
-        // 检查频率：折叠卡片，样式与「个性化」的两个折叠条目一致
-        ComboBox freqBox;
-        freqBox.MinWidth(160);
-        freqBox.Items().Append(box_value(L"每次启动"));
-        freqBox.Items().Append(box_value(L"每天"));
-        freqBox.Items().Append(box_value(L"每周"));
-        freqBox.Items().Append(box_value(L"每月"));
-        freqBox.Items().Append(box_value(L"每半年"));
-
+        // ---------------- 检查频率 ----------------
         auto freqIndex = [](std::wstring const& value) -> int
         {
             if (value == L"daily") { return 1; }
@@ -386,125 +172,88 @@ namespace winrt::ScreenControl::implementation
             }
         };
 
-        TextBlock freqValue;
-        freqValue.FontSize(14);
-        freqValue.VerticalAlignment(VerticalAlignment::Center);
-
-        freqBox.SelectedIndex(freqIndex(config.updateFrequency));
-        freqValue.Text(freqLabelOf(freqBox.SelectedIndex()));
-        freqBox.SelectionChanged([freqValueOf, freqLabelOf, freqValue](IInspectable const& sender, SelectionChangedEventArgs const&)
-        {
-            if (auto box = sender.try_as<ComboBox>())
+        FreqBox().SelectedIndex(freqIndex(config.updateFrequency));
+        FreqValue().Text(freqLabelOf(FreqBox().SelectedIndex()));
+        FreqBox().SelectionChanged(
+            [freqValueOf, freqLabelOf, value = FreqValue()](IInspectable const& sender, SelectionChangedEventArgs const&)
             {
-                ::ScreenControl::Ui::Config().Data().updateFrequency = freqValueOf(box.SelectedIndex());
-                ::ScreenControl::Ui::Config().Save();
-                freqValue.Text(freqLabelOf(box.SelectedIndex()));
-            }
-        });
-
-        Button checkNow;
-        checkNow.Content(box_value(L"立即检查"));
-        checkNow.VerticalAlignment(VerticalAlignment::Center);
-
-        ProgressRing checkRing;
-        checkRing.Width(24);
-        checkRing.Height(24);
-        checkRing.IsActive(false);
-        checkRing.VerticalAlignment(VerticalAlignment::Center);
-        checkRing.Visibility(Visibility::Collapsed);
-
-        StackPanel actions;
-        actions.Orientation(Orientation::Horizontal);
-        actions.Spacing(10);
-        actions.Children().Append(checkNow);
-        actions.Children().Append(checkRing);
-
-        StackPanel freqBody;
-        freqBody.Spacing(12);
-        freqBody.Children().Append(freqBox);
-        freqBody.Children().Append(actions);
-
-        page.Children().Append(MakeSettingsCard(L"\xE823", L"检查频率", freqValue, freqBody));
-
-        // 检查结果用 InfoBar 呈现（官方控件，比在标题后面拼接文字更清晰）
-        InfoBar resultBar;
-        resultBar.IsOpen(false);
-        resultBar.IsClosable(true);
-        resultBar.Severity(InfoBarSeverity::Informational);
-        resultBar.Title(L"检查更新");
-        page.Children().Append(resultBar);
-
-        checkNow.Click([this, checkNow, checkRing, firmware, resultBar](IInspectable const&, RoutedEventArgs const&)
-        {
-            checkNow.IsEnabled(false);
-            checkRing.IsActive(true);
-            checkRing.Visibility(Visibility::Visible);
-
-            auto root = this->XamlRoot();
-            auto queue = this->DispatcherQueue();
-
-            std::thread([checkNow, checkRing, firmware, root, queue, resultBar]()
-            {
-                auto release = ::ScreenControl::Ui::Firmware::FetchLatest();
-
-                queue.TryEnqueue([checkNow, checkRing, firmware, root, release, resultBar]()
+                if (auto box = sender.try_as<ComboBox>())
                 {
-                    checkNow.IsEnabled(true);
-                    checkRing.IsActive(false);
-                    checkRing.Visibility(Visibility::Collapsed);
+                    Config().Data().updateFrequency = freqValueOf(box.SelectedIndex());
+                    Config().Save();
+                    value.Text(freqLabelOf(box.SelectedIndex()));
+                }
+            });
 
-                    if (!release.found)
-                    {
-                        resultBar.Severity(InfoBarSeverity::Error);
-                        resultBar.Title(L"检查更新失败");
-                        resultBar.Message(L"无法获取固件信息，请检查网络后重试。");
-                        resultBar.IsOpen(true);
-                        return;
-                    }
+        // ---------------- 立即检查 ----------------
+        CheckNowButton().Click(
+            [this, firmware,
+             button = CheckNowButton(),
+             ring = CheckRing(),
+             bar = ResultBar()](IInspectable const&, RoutedEventArgs const&)
+            {
+                button.IsEnabled(false);
+                ring.IsActive(true);
+                ring.Visibility(Visibility::Visible);
 
-                    int current = 0;
-                    try
-                    {
-                        current = std::stoi(firmware);
-                    }
-                    catch (...)
-                    {
-                        current = 0;
-                    }
+                auto xamlRoot = this->XamlRoot();
+                auto queue = this->DispatcherQueue();
 
-                    if (release.version > current)
+                std::thread([button, ring, firmware, xamlRoot, queue, bar]()
+                {
+                    const auto release = ::ScreenControl::Ui::Firmware::FetchLatest();
+
+                    queue.TryEnqueue([button, ring, firmware, xamlRoot, release, bar]()
                     {
-                        resultBar.Severity(InfoBarSeverity::Informational);
-                        resultBar.Title(L"发现新固件 " + std::to_wstring(release.version));
-                        resultBar.Message(L"当前版本 " + firmware + L"，安装包 " + release.fileSize + L"。");
-                        resultBar.IsOpen(true);
-                        if (root)
+                        button.IsEnabled(true);
+                        ring.IsActive(false);
+                        ring.Visibility(Visibility::Collapsed);
+
+                        if (!release.found)
                         {
-                            ::ScreenControl::Ui::Firmware::ShowDialog(root, release);
+                            bar.Severity(InfoBarSeverity::Error);
+                            bar.Title(L"检查更新失败");
+                            bar.Message(L"无法获取固件信息，请检查网络后重试。");
+                            bar.IsOpen(true);
+                            return;
                         }
-                    }
-                    else
-                    {
-                        resultBar.Severity(InfoBarSeverity::Success);
-                        resultBar.Title(L"已是最新固件");
-                        resultBar.Message(L"当前版本 " + firmware + L"。");
-                        resultBar.IsOpen(true);
-                    }
-                });
-            }).detach();
-        });
 
-        // 页面入场动画：与主控页一致，内容根节点挂 EntranceThemeTransition
-        auto contentRoot = MakeScrollable(page);
-        contentRoot.Transitions().Append(
-            Microsoft::UI::Xaml::Media::Animation::EntranceThemeTransition{});
-        Content(contentRoot);
+                        int current = 0;
+                        try
+                        {
+                            current = std::stoi(firmware);
+                        }
+                        catch (...)
+                        {
+                            current = 0;
+                        }
+
+                        if (release.version > current)
+                        {
+                            bar.Severity(InfoBarSeverity::Informational);
+                            bar.Title(L"发现新固件 " + std::to_wstring(release.version));
+                            bar.Message(L"当前版本 " + firmware + L"，安装包 " + release.fileSize + L"。");
+                            bar.IsOpen(true);
+                            if (xamlRoot)
+                            {
+                                ::ScreenControl::Ui::Firmware::ShowDialog(xamlRoot, release);
+                            }
+                        }
+                        else
+                        {
+                            bar.Severity(InfoBarSeverity::Success);
+                            bar.Title(L"已是最新固件");
+                            bar.Message(L"当前版本 " + firmware + L"。");
+                            bar.IsOpen(true);
+                        }
+                    });
+                }).detach();
+            });
     }
 
     void SettingsPage::OnNavigatedFrom(Microsoft::UI::Xaml::Navigation::NavigationEventArgs const&)
     {
-        // 修复内存泄漏：子控件的事件处理器捕获了 this，形成引用环；
-        // 导航离开时断开 Content 才能释放旧页面。
+        // 断开 Page -> 内容 的引用环，否则旧页面（含事件处理器）永不释放
         Content(nullptr);
     }
 }
