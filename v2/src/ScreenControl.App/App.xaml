@@ -61,9 +61,11 @@
             </Style>
 
             <!-- ============ 设置行 ============ -->
+            <!-- 图标列固定 20 宽并居中：不同字形宽度不同，固定列宽才能让各行文字起点对齐 -->
             <Style x:Key="SettingRowIconStyle" TargetType="FontIcon">
                 <Setter Property="FontSize" Value="16" />
-                <Setter Property="Width" Value="16" />
+                <Setter Property="Width" Value="20" />
+                <Setter Property="HorizontalAlignment" Value="Center" />
                 <Setter Property="VerticalAlignment" Value="Center" />
             </Style>
 
@@ -88,12 +90,12 @@
                 <Setter Property="VerticalAlignment" Value="Center" />
             </Style>
 
+            <!-- 只用开关本体：清空来内容，尺寸交给默认模板（MinWidth 0 才会缩到贴合本体） -->
             <Style x:Key="SettingRowToggleStyle" TargetType="ToggleSwitch">
                 <Setter Property="MinWidth" Value="0" />
                 <Setter Property="OnContent" Value="" />
                 <Setter Property="OffContent" Value="" />
                 <Setter Property="VerticalAlignment" Value="Center" />
-                <Setter Property="HorizontalAlignment" Value="Right" />
             </Style>
 
             <!-- 展开内容：左侧缩进对齐标题文字，上下留白对称 -->

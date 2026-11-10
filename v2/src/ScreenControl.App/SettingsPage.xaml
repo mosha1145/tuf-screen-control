@@ -19,13 +19,20 @@
 
         <StackPanel Spacing="8" Margin="24,8,24,24">
 
+            <!-- 折叠展开/收起时，下方控件用官方 RepositionThemeTransition 平滑推开 -->
+            <StackPanel.ChildrenTransitions>
+                <TransitionCollection>
+                    <RepositionThemeTransition />
+                </TransitionCollection>
+            </StackPanel.ChildrenTransitions>
+
             <TextBlock Text="设置" Style="{StaticResource PageTitleStyle}" />
 
             <!-- ==================== 应用行为 ==================== -->
             <TextBlock Text="应用行为" Style="{StaticResource SectionTitleStyle}" />
 
             <Border Style="{StaticResource SettingsRowCardStyle}">
-                <Grid ColumnSpacing="16">
+                <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="*" />
@@ -41,7 +48,7 @@
             </Border>
 
             <Border Style="{StaticResource SettingsRowCardStyle}">
-                <Grid ColumnSpacing="16">
+                <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="*" />
@@ -53,7 +60,6 @@
                     <ComboBox
                         x:Name="CloseChoice"
                         Grid.Column="2"
-                        MinWidth="200"
                         VerticalAlignment="Center">
                         <x:String>隐藏到系统托盘</x:String>
                         <x:String>退出程序</x:String>
@@ -111,7 +117,7 @@
             <TextBlock Text="屏幕设置" Style="{StaticResource SectionTitleStyle}" />
 
             <Border Style="{StaticResource SettingsRowCardStyle}">
-                <Grid ColumnSpacing="16">
+                <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="*" />
@@ -135,7 +141,7 @@
             <TextBlock Text="更新" Style="{StaticResource SectionTitleStyle}" />
 
             <Border Style="{StaticResource SettingsRowCardStyle}">
-                <Grid ColumnSpacing="16">
+                <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="*" />
@@ -171,7 +177,7 @@
                 </Expander.Header>
 
                 <StackPanel Margin="32,8,0,16" Spacing="12">
-                    <ComboBox x:Name="FreqBox" MinWidth="160">
+                    <ComboBox x:Name="FreqBox">
                         <x:String>每次启动</x:String>
                         <x:String>每天</x:String>
                         <x:String>每周</x:String>
