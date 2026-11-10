@@ -4,6 +4,7 @@
 #include "PlaybackController.h"
 #include "ScreenController.h"
 #include "FirmwareUpdater.h"
+#include "PageTracker.h"
 #if __has_include("SettingsPage.g.cpp")
 #include "SettingsPage.g.cpp"
 #endif
@@ -35,6 +36,9 @@ namespace winrt::ScreenControl::implementation
     SettingsPage::SettingsPage()
     {
         InitializeComponent();
+        ::ScreenControl::TrackPage(L"Settings", 1);
+
+        NavigationCacheMode(Microsoft::UI::Xaml::Navigation::NavigationCacheMode::Required);
 
         auto& config = Config().Data();
 
@@ -251,9 +255,13 @@ namespace winrt::ScreenControl::implementation
             });
     }
 
+    SettingsPage::~SettingsPage()
+    {
+        ::ScreenControl::TrackPage(L"Settings", -1);
+    }
+
     void SettingsPage::OnNavigatedFrom(Microsoft::UI::Xaml::Navigation::NavigationEventArgs const&)
     {
         // 断开 Page -> 内容 的引用环，否则旧页面（含事件处理器）永不释放
-        Content(nullptr);
     }
 }

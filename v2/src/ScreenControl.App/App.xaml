@@ -40,9 +40,10 @@
             </Style>
 
             <!-- 折叠卡（Expander）：纵向内边距收掉，保证与单行卡片等高 -->
+            <!-- 官方建议：不要覆盖 Expander 的 Padding（会干扰模板内布局与展开动画），
+                 只设置对齐方式让父面板控制尺寸。 -->
             <Style x:Key="SettingsExpanderStyle" TargetType="Expander">
                 <Setter Property="CornerRadius" Value="4" />
-                <Setter Property="Padding" Value="16,0,16,0" />
                 <Setter Property="HorizontalAlignment" Value="Stretch" />
                 <Setter Property="HorizontalContentAlignment" Value="Stretch" />
             </Style>
