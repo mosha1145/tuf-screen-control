@@ -64,33 +64,26 @@ namespace winrt::TufScreenControl::implementation
 
     namespace
     {
-        /// 把激活参数重定向给已运行的实例。
+        /// 把激活参数重定向给已运行的实例，交接完成后退出本进程。
         ///
-        /// 官方文档范式是「RedirectActivationToAsync + 等一个完成事件」。直接照抄
-        /// 会卡死第二个实例——但原因不是免打包模式，而是**等待方式**：
-        /// 本线程是 STA（WinUI 的 UI 线程），C++/WinRT 的异步完成回调要靠 COM
-        /// 把调用封送回这个套间，而 WaitForSingleObject 不派发 COM 调用，
-        /// 回调永远排不上队，事件也就永远不被 Set。
-        ///
-        /// 正确做法是用 CoWaitForMultipleHandles 边等边派发（COWAIT_DISPATCH_CALLS
-        /// 处理 STA 调用、COWAIT_DISPATCH_WINDOW_MESSAGES 处理窗口消息），
-        /// 回调就能正常执行、事件立即到。超时只是兜底，正常情况下不会用到。
-        void RedirectActivationTo(AppActivationArguments const& args, AppInstance const& target)
+        /// 用 C++/WinRT 协程 co_await，不做任何同步等待——这是最贴合框架的做法：
+        ///  - 同步等（WaitForSingleObject）会卡死：本线程是 STA，完成回调要靠 COM
+        ///    封送回该套间，而同步等待不派发 COM 调用，回调永远排不上队。
+        ///  - co_await 把续体挂到当前套间的 DispatcherQueue 上，OnLaunched 返回后
+        ///    消息循环已经在跑，交接一完成就恢复执行。
+        /// 没有超时：交接完成才退出，语义正确，也不会留下看不见的僵尸进程。
+        winrt::fire_and_forget RedirectActivationAndExit(AppActivationArguments args,
+                                                         AppInstance target)
         {
-            constexpr DWORD kRedirectTimeoutMs = 5000;
-
-            winrt::handle ready{ ::CreateEventW(nullptr, FALSE, FALSE, nullptr) };
-            target.RedirectActivationToAsync(args).Completed(
-                [handle = ready.get()](auto&&, auto&&)
-                {
-                    ::SetEvent(handle);
-                });
-
-            HANDLE handles[1]{ ready.get() };
-            DWORD index = 0;
-            ::CoWaitForMultipleHandles(
-                COWAIT_DISPATCH_CALLS | COWAIT_DISPATCH_WINDOW_MESSAGES,
-                kRedirectTimeoutMs, 1, handles, &index);
+            try
+            {
+                co_await target.RedirectActivationToAsync(args);
+            }
+            catch (...)
+            {
+                // 交接失败也只能退出：另一实例已在运行，不能再开第二个窗口。
+            }
+            ::ExitProcess(0);
         }
 
         /// 把强调色注入到应用级资源。
@@ -163,8 +156,10 @@ namespace winrt::TufScreenControl::implementation
 
             if (!keyInstance.IsCurrent())
             {
-                RedirectActivationTo(activationArgs, keyInstance);
-                ::ExitProcess(0);
+                // 第二实例：把激活交给已有实例，交接完成后由协程退出本进程。
+                // 这里必须 return，不能继续往下创建窗口。
+                RedirectActivationAndExit(activationArgs, keyInstance);
+                return;
             }
         }
         catch (...)
