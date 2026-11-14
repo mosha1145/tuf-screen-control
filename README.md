@@ -104,14 +104,17 @@ python tuf_gui.py
 v2 工程由 **Visual Studio 2022 的官方 WinUI 3 C++ 模板** 生成，结构与模板一致
 （`App.xaml` / `MainWindow.xaml` / 各页面 `.xaml` + `.idl` + `.xaml.cpp` / `pch.h`）。
 
-命令行构建：
+命令行构建（推荐用解决方案，四个工程一起编）：
 
 ```bat
 "C:\Program Files\Microsoft Visual Studio\2022\Community\MSBuild\Current\Bin\MSBuild.exe" ^
-    v2\src\TufScreenControl\TufScreenControl.vcxproj /p:Configuration=Debug /p:Platform=x64
+    v2\src\TufScreenControl\TufScreenControl.sln /p:Configuration=Debug /p:Platform=x64
 ```
 
+也可以直接用 VS 2022 打开 `v2\src\TufScreenControl\TufScreenControl.sln` 后 F5。
+
 输出：`v2\src\TufScreenControl\x64\Debug\TufScreenControl\TufScreenControl.exe`
+（三个静态库的 `.lib` 也落在 `v2\src\TufScreenControl\x64\Debug\`）
 
 > **必须放在无空格路径下构建**：仓库目录名含空格时，C++/WinRT 的
 > `cppwinrt.exe` 会因响应文件路径未加引号而失败
