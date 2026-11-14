@@ -137,10 +137,25 @@ namespace winrt::TufScreenControl::implementation
             MainWindow::Current()->Player().Stop();
         });
 
+        // 首次进入时挂上句柄（之后的每次导航见 OnNavigatedTo）
+        AttachToMainWindow();
+    }
+
+    void DisplayPage::AttachToMainWindow()
+    {
         // ---------------- 交给主窗口做实时更新 ----------------
+        // 页面是缓存的（NavigationCacheMode::Required），构造函数只会跑一次；
+        // 离开页面时 MainWindow::DetachPageUi() 会把句柄清空，所以每次导航进来
+        // 都要重新挂上，否则切一次页面后预览/状态/设备徽标就再也不更新。
         MainWindow::Current()->AttachPreview(m_previewSource, m_previewPlaceholder);
         MainWindow::Current()->AttachStatusText(m_statusText);
         MainWindow::Current()->AttachDeviceText(m_deviceText);
+        MainWindow::Current()->RefreshDeviceBadge();
+    }
+
+    void DisplayPage::OnNavigatedTo(Microsoft::UI::Xaml::Navigation::NavigationEventArgs const&)
+    {
+        AttachToMainWindow();
     }
 
 

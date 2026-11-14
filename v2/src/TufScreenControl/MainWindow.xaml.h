@@ -47,6 +47,9 @@ namespace winrt::TufScreenControl::implementation
                            winrt::Microsoft::UI::Xaml::Controls::TextBlock const& placeholder);
         void DetachPageUi();
 
+        /// 按当前设备状态刷新预览框左上角的连接徽标。
+        void RefreshDeviceBadge();
+
     private:
         void SetupBackdropAndTitleBar();
 
@@ -63,9 +66,6 @@ namespace winrt::TufScreenControl::implementation
 
         /// 按配置的频率在启动时检查固件更新（有新版弹窗）。
         void MaybeCheckFirmwareUpdate();
-
-        /// 刷新预览框左上角的设备连接状态徽标。
-        void RefreshDeviceBadge();
 
         // ---------------- 托盘 / 关闭行为 ----------------
         void SetupTrayAndCloseBehavior();
