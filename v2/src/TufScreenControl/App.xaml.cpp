@@ -66,14 +66,18 @@ namespace winrt::TufScreenControl::implementation
     {
         /// 把激活参数重定向给已运行的实例。
         ///
-        /// 官方文档范式是「RedirectActivationToAsync + 等完成事件」。实测在
-        /// 免打包（unpackaged）模式下，接收方（key 实例）确实会收到 Activated
-        /// 事件并把窗口叫回来，但发起方的异步完成通知不会回来——死等会永久挂住
-        /// 第二个实例。所以这里给等待加超时：拿到完成通知就立即走，
-        /// 超时（说明通知丢了，激活其实已经送达）同样退出，不阻塞用户。
+        /// 官方文档范式是「RedirectActivationToAsync + 等一个完成事件」。直接照抄
+        /// 会卡死第二个实例——但原因不是免打包模式，而是**等待方式**：
+        /// 本线程是 STA（WinUI 的 UI 线程），C++/WinRT 的异步完成回调要靠 COM
+        /// 把调用封送回这个套间，而 WaitForSingleObject 不派发 COM 调用，
+        /// 回调永远排不上队，事件也就永远不被 Set。
+        ///
+        /// 正确做法是用 CoWaitForMultipleHandles 边等边派发（COWAIT_DISPATCH_CALLS
+        /// 处理 STA 调用、COWAIT_DISPATCH_WINDOW_MESSAGES 处理窗口消息），
+        /// 回调就能正常执行、事件立即到。超时只是兜底，正常情况下不会用到。
         void RedirectActivationTo(AppActivationArguments const& args, AppInstance const& target)
         {
-            constexpr DWORD kRedirectTimeoutMs = 3000;
+            constexpr DWORD kRedirectTimeoutMs = 5000;
 
             winrt::handle ready{ ::CreateEventW(nullptr, FALSE, FALSE, nullptr) };
             target.RedirectActivationToAsync(args).Completed(
@@ -81,7 +85,12 @@ namespace winrt::TufScreenControl::implementation
                 {
                     ::SetEvent(handle);
                 });
-            ::WaitForSingleObject(ready.get(), kRedirectTimeoutMs);
+
+            HANDLE handles[1]{ ready.get() };
+            DWORD index = 0;
+            ::CoWaitForMultipleHandles(
+                COWAIT_DISPATCH_CALLS | COWAIT_DISPATCH_WINDOW_MESSAGES,
+                kRedirectTimeoutMs, 1, handles, &index);
         }
 
         /// 把强调色注入到应用级资源。
