@@ -94,26 +94,37 @@ python tuf_gui.py
 | `tuf_direct.py` | 纯 JPEG 直发验证脚本（协议探针，非应用组成部分） |
 | `PROTOCOL_REVERSE_REPORT.md` | HID 协议逆向报告（数据包格式、命令、通信机制） |
 | `project_understanding_v2.md` | v2 架构理解与重构规划 |
-| `v2/` | v2（C++ / WinUI 3）工程源码与 MSBuild 解决方案 |
+| `v2/src/TufScreenControl/` | v2 主程序（WinUI 3 C++，VS 官方模板结构） |
+| `v2/src/ScreenControl.Core` / `.Device` / `.Imaging` | v2 三个静态库：业务核心 / 设备通信 / 图像处理 |
 
 ---
 
 ## 构建（v2）
 
-命令行直接构建（无需打开 Visual Studio 解决方案）：
+v2 工程由 **Visual Studio 2022 的官方 WinUI 3 C++ 模板** 生成，结构与模板一致
+（`App.xaml` / `MainWindow.xaml` / 各页面 `.xaml` + `.idl` + `.xaml.cpp` / `pch.h`）。
+
+命令行构建：
 
 ```bat
 "C:\Program Files\Microsoft Visual Studio\2022\Community\MSBuild\Current\Bin\MSBuild.exe" ^
-    v2\src\ScreenControl.App\ScreenControl.App.vcxproj /p:Configuration=Debug /p:Platform=x64
+    v2\src\TufScreenControl\TufScreenControl.vcxproj /p:Configuration=Debug /p:Platform=x64
 ```
 
-输出：`v2\out\x64\Debug\TufScreenControl.exe`
+输出：`v2\src\TufScreenControl\x64\Debug\TufScreenControl\TufScreenControl.exe`
 
-> **移动工作区后首次构建**：请先删除 `v2\out\obj`，否则中间产物里缓存的旧路径
-> 会导致 `RC2135: file not found ... .exe.embed.manifest`。
+> **必须放在无空格路径下构建**：仓库目录名含空格时，C++/WinRT 的
+> `cppwinrt.exe` 会因响应文件路径未加引号而失败
+> （典型报错：`Type 'Microsoft.Web.WebView2.Core.CoreWebView2' could not be found`）。
+> 本仓库路径为 `D:\Projects\TUF-Screen-Control`。
 >
-> 生成目录约定：C++/WinRT 头文件与 XAML 生成代码统一落在 `v2\out\generated\`，
-> 编译中间文件在 `v2\out\obj\`，均已被 `.gitignore` 忽略。
+> **应用为免打包（unpackaged）模式**：`WindowsPackageType=None` +
+> `WindowsAppSDKSelfContained=true`，构建产物可直接双击运行，
+> 无需安装 Windows App Runtime、也无需部署 MSIX。
+>
+> 依赖以 `packages.config` 方式还原到 `v2\src\TufScreenControl\packages\`，
+> 该目录与 `x64\` 均已被 `.gitignore` 忽略；首次构建前请先在 VS 中还原 NuGet 包
+> （或让 MSBuild 自动还原）。
 
 ---
 
