@@ -1,9 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
   主窗口（x:Class="TufScreenControl.MainWindow"）。
-  说明：本窗口只提供 XAML 根容器，使 XAML 编译器生成 MainWindow.xaml.g.h
-  （MainWindowT 基类 + InitializeComponent）；实际界面在 MainWindow.cpp 里
-  用 C++/WinRT 构建，再通过 Content(...) 挂到窗口上。
+  声明式布局：自定义标题栏 + NavigationView + 页面 Frame。
+  C++ 只负责事件、导航与业务逻辑（见 MainWindow.xaml.cpp）。
   根容器背景留空，避免盖住 Mica 系统背衬。
 -->
 <Window
@@ -13,12 +12,56 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     mc:Ignorable="d"
-    Title="ASUS AIO Screen Control">
+    Title="TUF Screen Control">
 
     <Grid x:Name="RootGrid" Background="Transparent">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
+
+        <!-- 自定义标题栏：占第一行，作为拖动区（ExtendsContentIntoTitleBar + SetTitleBar） -->
+        <Grid x:Name="AppTitleBar" Grid.Row="0" Height="44">
+            <StackPanel
+                Orientation="Horizontal"
+                Margin="16,0,0,0"
+                VerticalAlignment="Center"
+                Spacing="10">
+                <FontIcon Glyph="&#xE7F4;" FontSize="15" />
+                <TextBlock
+                    Text="TUF Screen Control"
+                    FontSize="13"
+                    VerticalAlignment="Center" />
+            </StackPanel>
+        </Grid>
+
+        <!-- 主区域：NavigationView 只占第 1 行，避免折叠面板与自定义标题栏重叠 -->
+        <NavigationView
+            x:Name="NavView"
+            Grid.Row="1"
+            IsBackButtonVisible="Collapsed"
+            IsSettingsVisible="False"
+            PaneDisplayMode="Auto"
+            CompactModeThresholdWidth="641"
+            ExpandedModeThresholdWidth="1008"
+            OpenPaneLength="216">
+
+            <NavigationView.MenuItems>
+                <NavigationViewItem x:Name="DisplayNavItem" Content="主控" Tag="display">
+                    <NavigationViewItem.Icon>
+                        <FontIcon Glyph="&#xE7F4;" />
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
+
+                <NavigationViewItem x:Name="SettingsNavItem" Content="设置" Tag="settings">
+                    <NavigationViewItem.Icon>
+                        <FontIcon Glyph="&#xE713;" />
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
+            </NavigationView.MenuItems>
+
+            <Frame x:Name="ContentFrame" />
+        </NavigationView>
+
     </Grid>
 </Window>

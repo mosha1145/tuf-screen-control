@@ -84,8 +84,9 @@ namespace winrt::TufScreenControl::implementation
         /// 用一帧 BGRA 像素刷新预览图（必须在 UI 线程调用）。
         void UpdatePreview(std::vector<std::uint8_t> const& pixels, int width, int height);
 
-        winrt::Microsoft::UI::Xaml::Controls::Frame m_contentFrame{ nullptr };
-        winrt::Microsoft::UI::Xaml::Controls::Grid m_titleBar{ nullptr };
+        /// 导航到指定 tag 的页面（display / settings）。
+        void NavigateTo(winrt::hstring const& tag);
+
         ::TufScreenControl::AppTheme m_theme{ ::TufScreenControl::AppTheme::System };
 
         std::unique_ptr<::TufScreenControl::Core::PlaybackController> m_player;

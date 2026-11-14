@@ -54,120 +54,24 @@ static ::winrt::TufScreenControl::implementation::MainWindow* s_current = nullpt
 
     MainWindow::MainWindow()
     {
-        // 从 MainWindow.xaml 加载根容器（RootGrid）并注册窗口类型。
+        // 从 MainWindow.xaml 加载界面（RootGrid / AppTitleBar / NavView / ContentFrame）。
         InitializeComponent();
 
-        // m_titleBar / m_contentFrame 在头文件中初始化为 nullptr，必须在此先实例化。
         s_current = this;
 
-        m_titleBar = Grid{};
-        m_contentFrame = Frame{};
+        // 标题栏与导航事件（布局全部在 XAML 里声明）。
+        SetupBackdropAndTitleBar();
 
-        // 根容器背景留空：一旦设了实色，Mica 就被盖住了。
-        Grid root = RootGrid();
-
-        // ---- 自定义标题栏（占第一行，作为拖动区） ----
-        m_titleBar.Height(44);
-        StackPanel titleContent;
-        titleContent.Orientation(Orientation::Horizontal);
-        titleContent.Margin(Thickness{ 16, 0, 0, 0 });
-        titleContent.VerticalAlignment(VerticalAlignment::Center);
-        titleContent.Spacing(10);
-
-        FontIcon icon;
-        icon.Glyph(L"\xE7F4");
-        icon.FontSize(15);
-        titleContent.Children().Append(icon);
-
-        TextBlock title;
-        title.Text(L"TUF Screen Control");
-        title.FontSize(13);
-        title.VerticalAlignment(VerticalAlignment::Center);
-        titleContent.Children().Append(title);
-
-        m_titleBar.Children().Append(titleContent);
-
-        // ---- NavigationView + Frame ----
-        NavigationView nav;
-        nav.IsBackButtonVisible(NavigationViewBackButtonVisible::Collapsed);
-        nav.IsSettingsVisible(false);
-        // 官方 NavigationView 的自适应行为：
-        //   宽度 >= ExpandedModeThresholdWidth  -> Left（内联推拉）
-        //   Compact <= 宽度 < Expanded          -> Compact
-        //   宽度 <  CompactModeThresholdWidth   -> Minimal（面板悬浮在内容之上）
-        nav.PaneDisplayMode(NavigationViewPaneDisplayMode::Auto);
-        nav.CompactModeThresholdWidth(641.0);
-        nav.ExpandedModeThresholdWidth(1008.0);
-        nav.OpenPaneLength(216);
-
-        NavigationViewItem itemDisplay;
-        itemDisplay.Content(box_value(L"主控"));
-        itemDisplay.Tag(box_value(L"display"));
-        FontIcon displayIcon;
-        displayIcon.Glyph(L"\xE7F4");
-        itemDisplay.Icon(displayIcon);
-        nav.MenuItems().Append(itemDisplay);
-
-        NavigationViewItem itemSettings;
-        itemSettings.Content(box_value(L"设置"));
-        itemSettings.Tag(box_value(L"settings"));
-        FontIcon settingsIcon;
-        settingsIcon.Glyph(L"\xE713");
-        itemSettings.Icon(settingsIcon);
-        nav.MenuItems().Append(itemSettings);
-
-nav.Content(m_contentFrame);
-
-        
-
-        nav.SelectionChanged([this](NavigationView const&, NavigationViewSelectionChangedEventArgs const& args)
+        NavView().SelectionChanged(
+            [this](NavigationView const&, NavigationViewSelectionChangedEventArgs const& args)
         {
             auto item = args.SelectedItem().try_as<NavigationViewItem>();
             if (!item)
             {
                 return;
             }
-
-            const std::wstring tag{ unbox_value<hstring>(item.Tag()).c_str() };
-            if (!m_currentTag.empty() && tag == m_currentTag)
-            {
-                return;   // 判重：同一个页面不重复导航
-            }
-            m_currentTag = tag;
-
-            // 导航切换动画：官方 EntranceNavigationTransitionInfo（淡入 + 从底部上浮）
-            // 用 winrt::name_of 显式构造 TypeName：不依赖 xaml_typename 辅助函数
-            // （在新版 C++/WinRT 里它的声明位置有变化，直接构造更稳）。
-            winrt::Windows::UI::Xaml::Interop::TypeName pageType{};
-            if (tag == L"settings")
-            {
-                pageType.Name = winrt::name_of<TufScreenControl::SettingsPage>();
-            }
-            else
-            {
-                pageType.Name = winrt::name_of<TufScreenControl::DisplayPage>();
-            }
-            pageType.Kind = winrt::Windows::UI::Xaml::Interop::TypeKind::Metadata;
-
-            Microsoft::UI::Xaml::Media::Animation::EntranceNavigationTransitionInfo entrance;
-            m_contentFrame.Navigate(pageType, nullptr, entrance);
-
-            // 关键：必须在 Navigate 之后清空。
-            // Navigate 会把"上一个页面"压入 BackStack，先清再导航等于没清，
-            // 旧页面（连同它的预览位图）会被一直引用，表现为每次切换内存增长。
-            m_contentFrame.BackStack().Clear();
+            NavigateTo(unbox_value<hstring>(item.Tag()));
         });
-
-        // 布局：标题栏独占第 0 行，NavigationView 只占第 1 行，
-        // 避免折叠时的汉堡面板与自定义标题栏区域重叠。
-        Grid::SetRow(m_titleBar, 0);
-        Grid::SetRow(nav, 1);
-        root.Children().Append(m_titleBar);
-        root.Children().Append(nav);
-
-        Title(L"TUF Screen Control");
-
-        SetupBackdropAndTitleBar();
 
         // 启动时按配置恢复主题（含「跟随系统」）。
         m_theme = ::TufScreenControl::NativeTheme::Parse(::TufScreenControl::Ui::Config().Data().appTheme);
@@ -185,18 +89,50 @@ nav.Content(m_contentFrame);
         // 首次导航放到窗口完成第一次布局之后。
         // 在构造函数里导航时 Frame 还是 0×0、窗口未显示，
         // EntranceNavigationTransitionInfo 没有可播放的目标，冷启动就没有入场动画。
-        root.Loaded([this, nav, itemDisplay](auto&&, auto&&)
+        RootGrid().Loaded([this](auto&&, auto&&)
         {
             if (!m_initialNavigationDone)
             {
                 m_initialNavigationDone = true;
                 // 触发 SelectionChanged -> Frame.Navigate(Entrance...)
-                nav.SelectedItem(itemDisplay);
+                NavView().SelectedItem(DisplayNavItem());
             }
 
             // 固件更新检查：此时 XamlRoot 才可用
             MaybeCheckFirmwareUpdate();
         });
+    }
+
+    void MainWindow::NavigateTo(hstring const& tag)
+    {
+        // 判重：同一个页面不重复导航
+        if (!m_currentTag.empty() && tag == m_currentTag)
+        {
+            return;
+        }
+        m_currentTag = tag;
+
+        // 导航切换动画：官方 EntranceNavigationTransitionInfo（淡入 + 从底部上浮）
+        // 用 winrt::name_of 显式构造 TypeName：不依赖 xaml_typename 辅助函数
+        // （在新版 C++/WinRT 里它的声明位置有变化，直接构造更稳）。
+        winrt::Windows::UI::Xaml::Interop::TypeName pageType{};
+        if (tag == L"settings")
+        {
+            pageType.Name = winrt::name_of<TufScreenControl::SettingsPage>();
+        }
+        else
+        {
+            pageType.Name = winrt::name_of<TufScreenControl::DisplayPage>();
+        }
+        pageType.Kind = winrt::Windows::UI::Xaml::Interop::TypeKind::Metadata;
+
+        Microsoft::UI::Xaml::Media::Animation::EntranceNavigationTransitionInfo entrance;
+        ContentFrame().Navigate(pageType, nullptr, entrance);
+
+        // 关键：必须在 Navigate 之后清空。
+        // Navigate 会把"上一个页面"压入 BackStack，先清再导航等于没清，
+        // 旧页面（连同它的预览位图）会被一直引用，表现为每次切换内存增长。
+        ContentFrame().BackStack().Clear();
     }
 
     void MainWindow::RefreshDeviceBadge()
@@ -747,7 +683,7 @@ nav.Content(m_contentFrame);
     {
         // 内容扩展进标题栏：标题栏与窗口内容融为一体。
         ExtendsContentIntoTitleBar(true);
-        SetTitleBar(m_titleBar);
+        SetTitleBar(AppTitleBar());
 
         // 系统按钮透明，让 Mica 从按钮下方透出来。
         if (auto appWindow = AppWindow())
