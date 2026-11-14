@@ -1,13 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  ScreenControl.Core — 应用逻辑层（静态库）
+  TufScreenControl.Core — 应用逻辑层（静态库）
   配置系统 / 素材库 / 播放编排。依赖 Device 与 Imaging，不依赖 WinUI。
-  工程名保留 ScreenControl.* 作为文件标识，C++ 命名空间为 TufScreenControl::Core。
 -->
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup Label="Globals">
     <ProjectGuid>{8A4C6E33-2F53-4B74-BD9C-3E2F4A5B6C73}</ProjectGuid>
-    <ProjectName>ScreenControl.Core</ProjectName>
+    <ProjectName>TufScreenControl.Core</ProjectName>
     <RootNamespace>TufScreenControl.Core</RootNamespace>
     <TargetName>$(ProjectName)</TargetName>
   </PropertyGroup>
@@ -47,7 +46,7 @@
   </ImportGroup>
 
   <PropertyGroup>
-    <IncludePath>$(MSBuildThisFileDirectory);$(MSBuildThisFileDirectory)..\ScreenControl.Device;$(MSBuildThisFileDirectory)..\ScreenControl.Imaging;$(IncludePath)</IncludePath>
+    <IncludePath>$(MSBuildThisFileDirectory);$(MSBuildThisFileDirectory)..\TufScreenControl.Device;$(MSBuildThisFileDirectory)..\TufScreenControl.Imaging;$(IncludePath)</IncludePath>
   </PropertyGroup>
 
   <ItemDefinitionGroup>
@@ -93,10 +92,10 @@
 
   <!-- 依赖下层静态库 -->
   <ItemGroup>
-    <ProjectReference Include="..\ScreenControl.Device\ScreenControl.Device.vcxproj">
+    <ProjectReference Include="..\TufScreenControl.Device\TufScreenControl.Device.vcxproj">
       <Project>{6E2A4C11-0D31-4F52-9B7A-1C0D2E3F4A51}</Project>
     </ProjectReference>
-    <ProjectReference Include="..\ScreenControl.Imaging\ScreenControl.Imaging.vcxproj">
+    <ProjectReference Include="..\TufScreenControl.Imaging\TufScreenControl.Imaging.vcxproj">
       <Project>{7F3B5D22-1E42-4A63-AC8B-2D1E3F4A5B62}</Project>
     </ProjectReference>
   </ItemGroup>

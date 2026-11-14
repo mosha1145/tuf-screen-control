@@ -96,7 +96,7 @@
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <PrecompiledHeaderOutputFile>$(IntDir)pch.pch</PrecompiledHeaderOutputFile>
       <!-- 引用同解决方案内的三个库工程（C++ 项目不像 C# 会自动传递包含目录） -->
-      <AdditionalIncludeDirectories>..\ScreenControl.Core;..\ScreenControl.Device;..\ScreenControl.Imaging;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\TufScreenControl.Core;..\TufScreenControl.Device;..\TufScreenControl.Imaging;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <WarningLevel>Level4</WarningLevel>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalOptions>%(AdditionalOptions) /bigobj /utf-8</AdditionalOptions>
@@ -189,14 +189,14 @@
     </Midl>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\ScreenControl.Core\ScreenControl.Core.vcxproj">
-      <Project>{A1000001-0000-0000-0000-000000000001}</Project>
+    <ProjectReference Include="..\TufScreenControl.Core\TufScreenControl.Core.vcxproj">
+      <Project>{8A4C6E33-2F53-4B74-BD9C-3E2F4A5B6C73}</Project>
     </ProjectReference>
-    <ProjectReference Include="..\ScreenControl.Device\ScreenControl.Device.vcxproj">
-      <Project>{A1000002-0000-0000-0000-000000000002}</Project>
+    <ProjectReference Include="..\TufScreenControl.Device\TufScreenControl.Device.vcxproj">
+      <Project>{6E2A4C11-0D31-4F52-9B7A-1C0D2E3F4A51}</Project>
     </ProjectReference>
-    <ProjectReference Include="..\ScreenControl.Imaging\ScreenControl.Imaging.vcxproj">
-      <Project>{A1000003-0000-0000-0000-000000000003}</Project>
+    <ProjectReference Include="..\TufScreenControl.Imaging\TufScreenControl.Imaging.vcxproj">
+      <Project>{7F3B5D22-1E42-4A63-AC8B-2D1E3F4A5B62}</Project>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>

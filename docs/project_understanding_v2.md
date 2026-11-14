@@ -3,6 +3,11 @@
 > 本文档基于对 v1.0（Python）全部源码 + `PROTOCOL_REVERSE_REPORT.md` 的通读整理，
 > 作为 v2（C++/WinUI3）工程开工前的架构共识基线。
 > 只读分析阶段产物，**不含任何已写入的代码**。
+>
+> ⚠️ **历史文档**：文中 `ScreenControl.App` / `ScreenControl.*` 等路径为开工时的
+> 规划命名，实际落地为 `v2/src/TufScreenControl`（主程序）+ `v2/src/TufScreenControl.Core`
+> / `.Device` / `.Imaging`（三个静态库），命名空间统一为 `TufScreenControl`。
+> 结构现状以 `README.md` 为准。
 
 ---
 

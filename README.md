@@ -92,10 +92,10 @@ python tuf_gui.py
 | `overlay.py` | 画面叠加层：时钟、自定义文本 |
 | `theme.py` | 界面设计令牌与样式 |
 | `tuf_direct.py` | 纯 JPEG 直发验证脚本（协议探针，非应用组成部分） |
-| `PROTOCOL_REVERSE_REPORT.md` | HID 协议逆向报告（数据包格式、命令、通信机制） |
-| `project_understanding_v2.md` | v2 架构理解与重构规划 |
+| `docs/PROTOCOL_REVERSE_REPORT.md` | HID 协议逆向报告（数据包格式、命令、通信机制） |
+| `docs/project_understanding_v2.md` | v2 架构理解与重构规划 |
 | `v2/src/TufScreenControl/` | v2 主程序（WinUI 3 C++，VS 官方模板结构） |
-| `v2/src/ScreenControl.Core` / `.Device` / `.Imaging` | v2 三个静态库：业务核心 / 设备通信 / 图像处理 |
+| `v2/src/TufScreenControl.Core` / `.Device` / `.Imaging` | v2 三个静态库：业务核心 / 设备通信 / 图像处理 |
 
 ---
 

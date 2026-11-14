@@ -1,6 +1,6 @@
 @echo off
 chcp 65001 >nul
-cd /d "D:\TUFScreenControl\PyTufGUI"
+cd /d "%~dp0"
 
 REM 选择带 PySide6 的 Python 解释器: 系统 Python 优先, 回退豆包运行时
 set "PY="

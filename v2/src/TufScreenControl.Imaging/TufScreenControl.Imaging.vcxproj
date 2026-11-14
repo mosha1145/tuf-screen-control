@@ -1,14 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  ScreenControl.Device — HID 协议层（静态库）
-  只依赖 Win32 / HID / SetupAPI，不依赖 WinUI，可脱离 UI 单测。
-  工程名保留 ScreenControl.* 作为文件标识，C++ 命名空间为 TufScreenControl::Device。
+  TufScreenControl.Imaging — 帧处理层（静态库）
+  BGR 直入的 JPEG 编码 + 几何变换。不依赖 WinUI。
 -->
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{6E2A4C11-0D31-4F52-9B7A-1C0D2E3F4A51}</ProjectGuid>
-    <ProjectName>ScreenControl.Device</ProjectName>
-    <RootNamespace>TufScreenControl.Device</RootNamespace>
+    <ProjectGuid>{7F3B5D22-1E42-4A63-AC8B-2D1E3F4A5B62}</ProjectGuid>
+    <ProjectName>TufScreenControl.Imaging</ProjectName>
+    <RootNamespace>TufScreenControl.Imaging</RootNamespace>
     <TargetName>$(ProjectName)</TargetName>
   </PropertyGroup>
 
@@ -76,17 +75,18 @@
 
   <ItemGroup>
     <ClInclude Include="pch.h" />
-    <ClInclude Include="FrameChunker.h" />
-    <ClInclude Include="HidProtocol.h" />
-    <ClInclude Include="ScreenController.h" />
+    <ClInclude Include="FrameGeometry.h" />
+    <ClInclude Include="FramePipeline.h" />
+    <ClInclude Include="JpegEncoder.h" />
+    <ClInclude Include="RenderParams.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="FrameChunker.cpp" />
-    <ClCompile Include="HidProtocol.cpp" />
-    <ClCompile Include="ScreenController.cpp" />
+    <ClCompile Include="FrameGeometry.cpp" />
+    <ClCompile Include="FramePipeline.cpp" />
+    <ClCompile Include="JpegEncoder.cpp" />
   </ItemGroup>
 
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

@@ -16,8 +16,10 @@ namespace winrt::TufScreenControl::implementation
 {
     App::App()
     {
-        // 注意：XAML 对象不应在构造函数里调用 InitializeComponent，
-        // 由框架在合适时机调用（见 cppwinrt 文档 #initializecomponent）。
+        // 与官方 WinUI 3 C++ 模板一致：在构造函数里加载 App.xaml
+        // （XamlControlsResources + 应用级样式表）。生成的 InitializeComponent
+        // 自带 _contentLoaded 幂等保护，重复调用无副作用。
+        InitializeComponent();
 
         // 全局兜底：把未处理异常写进 exe 同目录的 crash.log，
         // 否则 0xC000027B（stowed exception）在事件日志里只有模块偏移，无法定位。
