@@ -19,12 +19,12 @@
 #include <string>
 #include <vector>
 
-namespace ScreenControl::Core::Json
+namespace TufScreenControl::Core::Json
 {
     class Value;
 }
 
-namespace ScreenControl::Core
+namespace TufScreenControl::Core
 {
     /// 与 v1 config_store.DEFAULT_CONFIG 一一对应。
     /// 注意：默认值必须沿用 v1 的「代码默认值」，否则老用户升级后观感会变。

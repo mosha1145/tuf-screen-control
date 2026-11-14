@@ -1,7 +1,7 @@
 #include "pch.h"
 #include "HidProtocol.h"
 
-namespace ScreenControl::Device
+namespace TufScreenControl::Device
 {
     SendStatus ClassifyWin32Error(std::uint32_t lastError) noexcept
     {

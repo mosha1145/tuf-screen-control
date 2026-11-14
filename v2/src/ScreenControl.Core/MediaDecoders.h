@@ -22,7 +22,7 @@
 #include <string>
 #include <vector>
 
-namespace ScreenControl::Core
+namespace TufScreenControl::Core
 {
     /// 一帧解码结果（BGRA，自顶向下）。
     struct DecodedFrame

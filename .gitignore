@@ -25,3 +25,7 @@ v2/out/
 *.user
 config.json
 config.json.bak_*
+
+# VS 模板工程中间产物（packages.config 方式还原 + 构建输出）
+v2/src/TufScreenControl/packages/
+v2/src/TufScreenControl/x64/

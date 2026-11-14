@@ -9,7 +9,7 @@
 
 #pragma comment(lib, "shell32.lib")
 
-namespace ScreenControl::Core
+namespace TufScreenControl::Core
 {
     namespace
     {

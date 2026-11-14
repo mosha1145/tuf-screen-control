@@ -1,0 +1,22 @@
+#pragma once
+
+#include "App.xaml.g.h"
+#include "SingleInstance.h"
+
+namespace winrt::TufScreenControl::implementation
+{
+    // 应用对象（x:Class="TufScreenControl.App" 的代码后台声明）。
+    // AppT<App> 由 XAML 编译器生成的 App.xaml.g.h 提供。
+    struct App : AppT<App>
+    {
+        App();
+
+        void OnLaunched(Microsoft::UI::Xaml::LaunchActivatedEventArgs const&);
+
+    private:
+        winrt::Microsoft::UI::Xaml::Window window{ nullptr };
+
+        // 单实例守卫：第二个实例启动时通知已有实例把窗口叫出来，然后自己退出。
+        ::TufScreenControl::SingleInstance m_singleInstance;
+    };
+}

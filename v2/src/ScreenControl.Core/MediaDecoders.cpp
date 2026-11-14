@@ -21,7 +21,7 @@
 
 using Microsoft::WRL::ComPtr;
 
-namespace ScreenControl::Core
+namespace TufScreenControl::Core
 {
     namespace
     {

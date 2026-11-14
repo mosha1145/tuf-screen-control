@@ -8,10 +8,10 @@
 
 using namespace std::chrono_literals;
 
-namespace ScreenControl::Core
+namespace TufScreenControl::Core
 {
     PlaybackController::PlaybackController()
-        : m_pipeline(::ScreenControl::Device::kScreenSize)
+        : m_pipeline(::TufScreenControl::Device::kScreenSize)
     {
     }
 
@@ -43,7 +43,7 @@ namespace ScreenControl::Core
         return m_device.IsOpen();
     }
 
-    ::ScreenControl::Device::DeviceState PlaybackController::DeviceStateNow() const
+    ::TufScreenControl::Device::DeviceState PlaybackController::DeviceStateNow() const
     {
         return m_device.State();
     }
@@ -52,7 +52,7 @@ namespace ScreenControl::Core
     {
         /// 按需打开设备：控件操作时若设备尚未打开（例如启动时打开失败，
         /// 之后用户退出了它），这里再试一次，避免"控件没反应"。
-        bool EnsureDevice(::ScreenControl::Device::ScreenController& device)
+        bool EnsureDevice(::TufScreenControl::Device::ScreenController& device)
         {
             if (device.IsOpen())
             {
@@ -339,11 +339,11 @@ namespace ScreenControl::Core
             if (m_screenOn.load() && m_device.IsOpen())
             {
                 const auto status = m_device.SendFrame(jpeg, 0);
-                if (status == ::ScreenControl::Device::SendStatus::Ok)
+                if (status == ::TufScreenControl::Device::SendStatus::Ok)
                 {
                     consecutiveFailures = 0;
                 }
-                else if (status == ::ScreenControl::Device::SendStatus::DeviceGone)
+                else if (status == ::TufScreenControl::Device::SendStatus::DeviceGone)
                 {
                     Notify(L"设备已断开，播放已停止。");
                     break;

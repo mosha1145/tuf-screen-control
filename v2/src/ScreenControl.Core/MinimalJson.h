@@ -17,7 +17,7 @@
 #include <string>
 #include <vector>
 
-namespace ScreenControl::Core::Json
+namespace TufScreenControl::Core::Json
 {
     enum class Type
     {

@@ -4,7 +4,7 @@
 #include <algorithm>
 #include <cstring>
 
-namespace ScreenControl::Imaging
+namespace TufScreenControl::Imaging
 {
     namespace
     {

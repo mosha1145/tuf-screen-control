@@ -31,7 +31,7 @@
 #include "RenderParams.h"
 #include "ScreenController.h"
 
-namespace ScreenControl::Core
+namespace TufScreenControl::Core
 {
     class PlaybackController
     {
@@ -53,7 +53,7 @@ namespace ScreenControl::Core
         bool OpenDevice();
         void CloseDevice();
         bool DeviceReady() const noexcept;
-        ::ScreenControl::Device::DeviceState DeviceStateNow() const;
+        ::TufScreenControl::Device::DeviceState DeviceStateNow() const;
 
         bool SetBrightness(int percent);
         bool SetScreenPower(bool on);
@@ -98,7 +98,7 @@ namespace ScreenControl::Core
         void Notify(std::wstring const& message) const;
         void SleepUntil(std::chrono::steady_clock::time_point deadline) const;
 
-        ::ScreenControl::Device::ScreenController m_device;
+        ::TufScreenControl::Device::ScreenController m_device;
         Imaging::FramePipeline m_pipeline;
 
         mutable std::mutex m_mutex;

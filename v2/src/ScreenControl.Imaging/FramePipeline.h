@@ -17,7 +17,7 @@
 #include "FrameGeometry.h"
 #include "RenderParams.h"
 
-namespace ScreenControl::Imaging
+namespace TufScreenControl::Imaging
 {
     class FramePipeline
     {

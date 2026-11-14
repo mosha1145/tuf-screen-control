@@ -1,0 +1,8 @@
+namespace TufScreenControl
+{
+    [default_interface]
+    runtimeclass DisplayPage : Microsoft.UI.Xaml.Controls.Page
+    {
+        DisplayPage();
+    }
+}

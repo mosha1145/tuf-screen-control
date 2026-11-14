@@ -20,7 +20,7 @@
 #include <cstdint>
 #include <vector>
 
-namespace ScreenControl::Imaging
+namespace TufScreenControl::Imaging
 {
     class JpegEncoder
     {

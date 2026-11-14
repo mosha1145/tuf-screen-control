@@ -12,7 +12,7 @@
 
 #include <cstdint>
 
-namespace ScreenControl::Imaging
+namespace TufScreenControl::Imaging
 {
     /// 图像适配模式（对应 v1 asset_lib.FIT_MODES）。
     enum class FitMode

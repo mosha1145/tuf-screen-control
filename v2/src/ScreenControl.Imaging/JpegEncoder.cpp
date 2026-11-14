@@ -5,7 +5,7 @@
 
 using Microsoft::WRL::ComPtr;
 
-namespace ScreenControl::Imaging
+namespace TufScreenControl::Imaging
 {
     namespace
     {

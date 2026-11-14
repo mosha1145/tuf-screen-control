@@ -12,7 +12,7 @@
 #pragma comment(lib, "setupapi.lib")
 #pragma comment(lib, "hid.lib")
 
-namespace ScreenControl::Device
+namespace TufScreenControl::Device
 {
     namespace
     {

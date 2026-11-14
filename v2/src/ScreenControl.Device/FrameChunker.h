@@ -22,7 +22,7 @@
 #include <cstdint>
 #include <span>
 
-namespace ScreenControl::Device
+namespace TufScreenControl::Device
 {
     /// 单块 JPEG 载荷长度（字节）。
     inline constexpr std::size_t kJpegChunkSize = 1020;

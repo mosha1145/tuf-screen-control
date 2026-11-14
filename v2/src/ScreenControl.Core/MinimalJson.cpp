@@ -3,7 +3,7 @@
 
 #include <cstdlib>
 
-namespace ScreenControl::Core::Json
+namespace TufScreenControl::Core::Json
 {
     namespace
     {

@@ -2,7 +2,7 @@
 #include "FramePipeline.h"
 #include "JpegEncoder.h"
 
-namespace ScreenControl::Imaging
+namespace TufScreenControl::Imaging
 {
     FramePipeline::FramePipeline(int size)
         : m_canvas(size)

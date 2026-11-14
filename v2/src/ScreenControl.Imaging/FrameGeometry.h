@@ -15,7 +15,7 @@
 
 #include "RenderParams.h"
 
-namespace ScreenControl::Imaging
+namespace TufScreenControl::Imaging
 {
     /// 一帧像素：BGRA8，行距 = width * 4。
     struct FrameView

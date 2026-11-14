@@ -3,7 +3,7 @@
 
 #include <cstring>
 
-namespace ScreenControl::Device
+namespace TufScreenControl::Device
 {
     std::uint8_t FrameChunker::BlockCount(std::size_t jpegBytes) noexcept
     {

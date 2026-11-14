@@ -19,7 +19,7 @@
 #include <string>
 #include <vector>
 
-namespace ScreenControl::Device
+namespace TufScreenControl::Device
 {
     /// 设备 USB 标识。
     inline constexpr std::uint16_t kAsusVendorId = 0x0B05;

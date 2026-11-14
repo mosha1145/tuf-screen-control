@@ -22,7 +22,7 @@
 
 #include "HidProtocol.h"
 
-namespace ScreenControl::Device
+namespace TufScreenControl::Device
 {
     class ScreenController
     {
