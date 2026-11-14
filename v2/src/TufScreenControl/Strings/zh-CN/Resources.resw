@@ -1,0 +1,162 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/plain</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+
+  <!-- ============ 主窗口 ============ -->
+  <data name="AppTitleText.Text" xml:space="preserve">
+    <value>TUF Screen Control</value>
+  </data>
+  <data name="NavDisplayItem.Content" xml:space="preserve">
+    <value>主控</value>
+  </data>
+  <data name="NavSettingsItem.Content" xml:space="preserve">
+    <value>设置</value>
+  </data>
+
+  <!-- ============ 主控页 ============ -->
+  <data name="DisplayPageTitle.Text" xml:space="preserve">
+    <value>主控</value>
+  </data>
+  <data name="PreviewPlaceholder.Text" xml:space="preserve">
+    <value>未在显示</value>
+  </data>
+  <data name="ScreenSwitch.Header" xml:space="preserve">
+    <value>屏幕开关</value>
+  </data>
+  <data name="BrightnessLabel.Text" xml:space="preserve">
+    <value>亮度</value>
+  </data>
+  <data name="FitModeBox.Header" xml:space="preserve">
+    <value>图像适应</value>
+  </data>
+  <data name="RotationBox.Header" xml:space="preserve">
+    <value>画面旋转</value>
+  </data>
+  <data name="PhotoLabel.Text" xml:space="preserve">
+    <value>照片</value>
+  </data>
+  <data name="VideoLabel.Text" xml:space="preserve">
+    <value>视频</value>
+  </data>
+  <data name="PlayPhotoButton.Content" xml:space="preserve">
+    <value>播放选中的照片</value>
+  </data>
+  <data name="PlayVideoButton.Content" xml:space="preserve">
+    <value>播放选中的视频</value>
+  </data>
+  <data name="StopButton.Content" xml:space="preserve">
+    <value>停止显示</value>
+  </data>
+
+  <!-- ============ 设置页 ============ -->
+  <data name="SettingsPageTitle.Text" xml:space="preserve">
+    <value>设置</value>
+  </data>
+  <data name="SectionBehavior.Text" xml:space="preserve">
+    <value>应用行为</value>
+  </data>
+  <data name="AutoStartLabel.Text" xml:space="preserve">
+    <value>开机自启动</value>
+  </data>
+  <data name="CloseActionLabel.Text" xml:space="preserve">
+    <value>关闭窗口时</value>
+  </data>
+  <data name="SectionPersonalization.Text" xml:space="preserve">
+    <value>个性化</value>
+  </data>
+  <data name="ThemeLabel.Text" xml:space="preserve">
+    <value>应用主题</value>
+  </data>
+  <data name="ThemeColorLabel.Text" xml:space="preserve">
+    <value>主题色</value>
+  </data>
+  <data name="SectionDisplay.Text" xml:space="preserve">
+    <value>屏幕设置</value>
+  </data>
+  <data name="SleepLabel.Text" xml:space="preserve">
+    <value>睡眠模式</value>
+  </data>
+  <data name="SleepDescription.Text" xml:space="preserve">
+    <value>无内容播放时关闭屏幕</value>
+  </data>
+  <data name="SectionUpdate.Text" xml:space="preserve">
+    <value>更新</value>
+  </data>
+  <data name="UpdateLabel.Text" xml:space="preserve">
+    <value>自动检测更新</value>
+  </data>
+  <data name="UpdateFrequencyLabel.Text" xml:space="preserve">
+    <value>检查频率</value>
+  </data>
+  <data name="CheckNowButton.Content" xml:space="preserve">
+    <value>立即检查</value>
+  </data>
+  <data name="ResultBar.Title" xml:space="preserve">
+    <value>检查更新</value>
+  </data>
+
+  <!--
+    尚未本地化的部分（有意保留字面量，见 docs/README 说明）：
+      * 枚举项：<x:String> 形式的下拉/单选选项（适应/填充/拉伸、0°/90°/180°/270°、
+        每次启动/每天/…、浅色/深色/使用系统设置）——x:String 不支持 x:Uid。
+      * 运行期由 C++ 覆盖的文本：状态栏、设备徽标、各行的值/状态、对话框内容，
+        这些由 ResourceLoader 取串才有意义，需与 Core 层状态串一起规划。
+  -->
+</root>

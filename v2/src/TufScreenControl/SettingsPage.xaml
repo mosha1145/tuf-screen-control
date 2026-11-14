@@ -31,7 +31,7 @@
                 </TransitionCollection>
             </StackPanel.ChildrenTransitions>
 
-            <TextBlock Text="设置" Style="{StaticResource PageTitleStyle}" />
+            <TextBlock x:Uid="SettingsPageTitle" Text="设置" Style="{StaticResource PageTitleStyle}" />
 
             <!-- ==================== 应用行为 ==================== -->
             <StackPanel Spacing="4">
@@ -41,7 +41,7 @@
                         <RepositionThemeTransition />
                     </TransitionCollection>
                 </StackPanel.ChildrenTransitions>
-                <TextBlock Text="应用行为" Style="{StaticResource SectionTitleStyle}" />
+                <TextBlock x:Uid="SectionBehavior" Text="应用行为" Style="{StaticResource SectionTitleStyle}" />
 
                 <Border Style="{StaticResource SettingsRowCardStyle}">
                     <Grid ColumnSpacing="16">
@@ -53,7 +53,7 @@
                         </Grid.ColumnDefinitions>
 
                         <FontIcon Glyph="&#xE7E8;" Style="{StaticResource SettingRowIconStyle}" AutomationProperties.AccessibilityView="Raw" />
-                        <TextBlock Grid.Column="1" Text="开机自启动" Style="{StaticResource SettingRowTitleStyle}" />
+                        <TextBlock Grid.Column="1" x:Uid="AutoStartLabel" Text="开机自启动" Style="{StaticResource SettingRowTitleStyle}" />
                         <TextBlock x:Name="AutoStartStatus" Grid.Column="2" Text="关" Style="{StaticResource SettingRowStatusStyle}" />
                         <ToggleSwitch
                             x:Name="AutoStartSwitch"
@@ -76,7 +76,7 @@
                         </Grid.ColumnDefinitions>
 
                         <FontIcon Glyph="&#xE8BB;" Style="{StaticResource SettingRowIconStyle}" AutomationProperties.AccessibilityView="Raw" />
-                        <TextBlock Grid.Column="1" Text="关闭窗口时" Style="{StaticResource SettingRowTitleStyle}" />
+                        <TextBlock Grid.Column="1" x:Uid="CloseActionLabel" Text="关闭窗口时" Style="{StaticResource SettingRowTitleStyle}" />
                         <ComboBox x:Name="CloseChoice" Grid.Column="2" MinWidth="200" HorizontalAlignment="Right" VerticalAlignment="Center" AutomationProperties.Name="关闭窗口时">
                             <x:String>隐藏到系统托盘</x:String>
                             <x:String>退出程序</x:String>
@@ -93,7 +93,7 @@
                         <RepositionThemeTransition />
                     </TransitionCollection>
                 </StackPanel.ChildrenTransitions>
-                <TextBlock Text="个性化" Style="{StaticResource SectionTitleStyle}" />
+                <TextBlock x:Uid="SectionPersonalization" Text="个性化" Style="{StaticResource SectionTitleStyle}" />
 
                 <Expander Style="{StaticResource SettingsExpanderStyle}">
                     <Expander.Header>
@@ -105,7 +105,7 @@
                             </Grid.ColumnDefinitions>
 
                             <FontIcon Glyph="&#xE706;" Style="{StaticResource SettingRowIconStyle}" AutomationProperties.AccessibilityView="Raw" />
-                            <TextBlock Grid.Column="1" Text="应用主题" Style="{StaticResource SettingRowTitleStyle}" />
+                            <TextBlock Grid.Column="1" x:Uid="ThemeLabel" Text="应用主题" Style="{StaticResource SettingRowTitleStyle}" />
                             <TextBlock x:Name="ThemeValue" Grid.Column="2" Text="使用系统设置" Style="{StaticResource SettingRowValueStyle}" />
                         </Grid>
                     </Expander.Header>
@@ -127,7 +127,7 @@
                             </Grid.ColumnDefinitions>
 
                             <FontIcon Glyph="&#xE790;" Style="{StaticResource SettingRowIconStyle}" AutomationProperties.AccessibilityView="Raw" />
-                            <TextBlock Grid.Column="1" Text="主题色" Style="{StaticResource SettingRowTitleStyle}" />
+                            <TextBlock Grid.Column="1" x:Uid="ThemeColorLabel" Text="主题色" Style="{StaticResource SettingRowTitleStyle}" />
                             <TextBlock x:Name="ThemeColorValue" Grid.Column="2" Text="使用系统设置" Style="{StaticResource SettingRowValueStyle}" />
                         </Grid>
                     </Expander.Header>
@@ -147,7 +147,7 @@
                         <RepositionThemeTransition />
                     </TransitionCollection>
                 </StackPanel.ChildrenTransitions>
-                <TextBlock Text="屏幕设置" Style="{StaticResource SectionTitleStyle}" />
+                <TextBlock x:Uid="SectionDisplay" Text="屏幕设置" Style="{StaticResource SectionTitleStyle}" />
 
                 <Border Style="{StaticResource SettingsRowCardStyle}">
                     <Grid ColumnSpacing="16">
@@ -161,8 +161,8 @@
                         <FontIcon Glyph="&#xE708;" Style="{StaticResource SettingRowIconStyle}" AutomationProperties.AccessibilityView="Raw" />
 
                         <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
-                            <TextBlock Text="睡眠模式" />
-                            <TextBlock Text="无内容播放时关闭屏幕" Style="{StaticResource SettingRowSmallTextStyle}" />
+                            <TextBlock x:Uid="SleepLabel" Text="睡眠模式" />
+                            <TextBlock x:Uid="SleepDescription" Text="无内容播放时关闭屏幕" Style="{StaticResource SettingRowSmallTextStyle}" />
                         </StackPanel>
 
                         <TextBlock x:Name="SleepStatus" Grid.Column="2" Text="开" Style="{StaticResource SettingRowStatusStyle}" />
@@ -187,7 +187,7 @@
                         <RepositionThemeTransition />
                     </TransitionCollection>
                 </StackPanel.ChildrenTransitions>
-                <TextBlock Text="更新" Style="{StaticResource SectionTitleStyle}" />
+                <TextBlock x:Uid="SectionUpdate" Text="更新" Style="{StaticResource SectionTitleStyle}" />
 
                 <Border Style="{StaticResource SettingsRowCardStyle}">
                     <Grid ColumnSpacing="16">
@@ -201,7 +201,7 @@
                         <FontIcon Glyph="&#xE895;" Style="{StaticResource SettingRowIconStyle}" AutomationProperties.AccessibilityView="Raw" />
 
                         <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
-                            <TextBlock Text="自动检测更新" />
+                            <TextBlock x:Uid="UpdateLabel" Text="自动检测更新" />
                             <TextBlock x:Name="UpdateDesc" Text="固件版本" Style="{StaticResource SettingRowSmallTextStyle}" />
                         </StackPanel>
 
@@ -228,7 +228,7 @@
                             </Grid.ColumnDefinitions>
 
                             <FontIcon Glyph="&#xE823;" Style="{StaticResource SettingRowIconStyle}" AutomationProperties.AccessibilityView="Raw" />
-                            <TextBlock Grid.Column="1" Text="检查频率" Style="{StaticResource SettingRowTitleStyle}" />
+                            <TextBlock Grid.Column="1" x:Uid="UpdateFrequencyLabel" Text="检查频率" Style="{StaticResource SettingRowTitleStyle}" />
                             <TextBlock x:Name="FreqValue" Grid.Column="2" Text="每次启动" Style="{StaticResource SettingRowValueStyle}" />
                         </Grid>
                     </Expander.Header>
@@ -243,7 +243,7 @@
                         </ComboBox>
 
                         <StackPanel Orientation="Horizontal" Spacing="10">
-                            <Button x:Name="CheckNowButton" Content="立即检查" />
+                            <Button x:Name="CheckNowButton" x:Uid="CheckNowButton" Content="立即检查" />
                             <ProgressRing
                                 x:Name="CheckRing"
                                 Width="24"
@@ -259,6 +259,7 @@
                     x:Name="ResultBar"
                     IsOpen="False"
                     IsClosable="True"
+                    x:Uid="ResultBar"
                     Title="检查更新" />
             </StackPanel>
 

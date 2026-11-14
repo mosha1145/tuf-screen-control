@@ -21,6 +21,7 @@
         <StackPanel Spacing="16" Margin="24,8,24,24">
 
             <TextBlock
+                x:Uid="DisplayPageTitle"
                 Text="主控"
                 Style="{StaticResource TitleTextBlockStyle}"
                 Margin="0,0,0,12" />
@@ -57,6 +58,7 @@
 
                         <TextBlock
                             x:Name="PreviewPlaceholder"
+                            x:Uid="PreviewPlaceholder"
                             Text="未在显示"
                             HorizontalAlignment="Center"
                             VerticalAlignment="Center"
@@ -89,10 +91,10 @@
                     Background="{StaticResource CardBackgroundFillColorDefaultBrush}">
                     <StackPanel Spacing="14">
 
-                        <ToggleSwitch x:Name="ScreenSwitch" Header="屏幕开关" />
+                        <ToggleSwitch x:Name="ScreenSwitch" x:Uid="ScreenSwitch" Header="屏幕开关" />
 
                         <StackPanel Spacing="6">
-                            <TextBlock Text="亮度" />
+                            <TextBlock x:Uid="BrightnessLabel" Text="亮度" />
                             <Slider
                                 x:Name="BrightnessSlider"
                                 Minimum="0"
@@ -100,13 +102,13 @@
                                 AutomationProperties.Name="亮度" />
                         </StackPanel>
 
-                        <ComboBox x:Name="FitModeBox" Header="图像适应">
+                        <ComboBox x:Name="FitModeBox" x:Uid="FitModeBox" Header="图像适应">
                             <x:String>适应</x:String>
                             <x:String>填充</x:String>
                             <x:String>拉伸</x:String>
                         </ComboBox>
 
-                        <ComboBox x:Name="RotationBox" Header="画面旋转">
+                        <ComboBox x:Name="RotationBox" x:Uid="RotationBox" Header="画面旋转">
                             <x:String>0°</x:String>
                             <x:String>90°</x:String>
                             <x:String>180°</x:String>
@@ -138,19 +140,19 @@
                         </Grid.ColumnDefinitions>
 
                         <StackPanel Spacing="6">
-                            <TextBlock Text="照片" />
+                            <TextBlock x:Uid="PhotoLabel" Text="照片" />
                             <ListView x:Name="PhotoList" Height="180" AutomationProperties.Name="照片素材列表" />
-                            <Button x:Name="PlayPhotoButton" Content="播放选中的照片" />
+                            <Button x:Name="PlayPhotoButton" x:Uid="PlayPhotoButton" Content="播放选中的照片" />
                         </StackPanel>
 
                         <StackPanel Grid.Column="1" Spacing="6">
-                            <TextBlock Text="视频" />
+                            <TextBlock x:Uid="VideoLabel" Text="视频" />
                             <ListView x:Name="VideoList" Height="180" AutomationProperties.Name="视频素材列表" />
-                            <Button x:Name="PlayVideoButton" Content="播放选中的视频" />
+                            <Button x:Name="PlayVideoButton" x:Uid="PlayVideoButton" Content="播放选中的视频" />
                         </StackPanel>
                     </Grid>
 
-                    <Button x:Name="StopButton" Content="停止显示" />
+                    <Button x:Name="StopButton" x:Uid="StopButton" Content="停止显示" />
 
                 </StackPanel>
             </Border>

@@ -29,6 +29,7 @@
                 Spacing="10">
                 <FontIcon Glyph="&#xE7F4;" FontSize="15" AutomationProperties.AccessibilityView="Raw" />
                 <TextBlock
+                    x:Uid="AppTitleText"
                     Text="TUF Screen Control"
                     FontSize="13"
                     VerticalAlignment="Center" />
@@ -47,13 +48,13 @@
             OpenPaneLength="216">
 
             <NavigationView.MenuItems>
-                <NavigationViewItem x:Name="DisplayNavItem" Content="主控" Tag="display">
+                <NavigationViewItem x:Name="DisplayNavItem" x:Uid="NavDisplayItem" Content="主控" Tag="display">
                     <NavigationViewItem.Icon>
                         <FontIcon Glyph="&#xE7F4;" />
                     </NavigationViewItem.Icon>
                 </NavigationViewItem>
 
-                <NavigationViewItem x:Name="SettingsNavItem" Content="设置" Tag="settings">
+                <NavigationViewItem x:Name="SettingsNavItem" x:Uid="NavSettingsItem" Content="设置" Tag="settings">
                     <NavigationViewItem.Icon>
                         <FontIcon Glyph="&#xE713;" />
                     </NavigationViewItem.Icon>

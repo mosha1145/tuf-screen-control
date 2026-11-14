@@ -97,6 +97,10 @@ python tuf_gui.py
 | `v2/src/TufScreenControl/` | v2 主程序（WinUI 3 C++，VS 官方模板结构） |
 | `v2/src/TufScreenControl.Core` / `.Device` / `.Imaging` | v2 三个静态库：业务核心 / 设备通信 / 图像处理 |
 
+界面文案走 WinUI 的 `x:Uid` + PRI 资源：`v2/src/TufScreenControl/Strings/zh-CN/Resources.resw`。
+静态标签已全部接入；`<x:String>` 形式的枚举项（适应/填充/拉伸、旋转角度、更新频率等，
+`x:String` 不支持 `x:Uid`）和运行期由 C++ 覆盖的状态文本暂未接入。
+
 ---
 
 ## 构建（v2）
