@@ -9,7 +9,7 @@ namespace TufScreenControl
 {
     namespace
     {
-        constexpr wchar_t kTrayIconProp[] = L"ScreenControl.TrayIcon.Instance";
+        constexpr wchar_t kTrayIconProp[] = L"TufScreenControl.TrayIcon.Instance";
         constexpr UINT kTrayIconId = 1;
 
         /// 取当前 exe 的图标；失败时退回系统默认图标（保证 hIcon 非空）。

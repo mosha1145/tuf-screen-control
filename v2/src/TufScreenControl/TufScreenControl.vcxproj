@@ -21,7 +21,7 @@
     <MinimalCoreWin>true</MinimalCoreWin>
     <ProjectGuid>{15bf6d62-1e3c-43ac-be90-f37bfcc26a63}</ProjectGuid>
     <ProjectName>TufScreenControl</ProjectName>
-    <!-- 沿用原有代码的 C++/WinRT 根命名空间 ScreenControl；可执行文件名仍为 TufScreenControl -->
+    <!-- C++/WinRT 根命名空间、TargetName、x:Class 前缀三者统一为 TufScreenControl -->
     <RootNamespace>TufScreenControl</RootNamespace>
     <!--
       $(TargetName) should be same as $(RootNamespace) so that the produced binaries (.exe/.pri/etc.)

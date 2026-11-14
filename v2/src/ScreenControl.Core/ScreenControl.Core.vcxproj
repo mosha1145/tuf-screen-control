@@ -2,13 +2,13 @@
 <!--
   ScreenControl.Core — 应用逻辑层（静态库）
   配置系统 / 素材库 / 播放编排。依赖 Device 与 Imaging，不依赖 WinUI。
-  共享属性见 ..\..\Directory.Build.props
+  工程名保留 ScreenControl.* 作为文件标识，C++ 命名空间为 TufScreenControl::Core。
 -->
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup Label="Globals">
     <ProjectGuid>{8A4C6E33-2F53-4B74-BD9C-3E2F4A5B6C73}</ProjectGuid>
     <ProjectName>ScreenControl.Core</ProjectName>
-    <RootNamespace>ScreenControl.Core</RootNamespace>
+    <RootNamespace>TufScreenControl.Core</RootNamespace>
     <TargetName>$(ProjectName)</TargetName>
   </PropertyGroup>
 

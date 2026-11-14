@@ -6,7 +6,7 @@ namespace TufScreenControl
     namespace
     {
         /// 每个窗口只允许一个 PowerMonitor 实例，用窗口 USERDATA 挂接。
-        constexpr wchar_t kPowerMonitorProp[] = L"ScreenControl.PowerMonitor";
+        constexpr wchar_t kPowerMonitorProp[] = L"TufScreenControl.PowerMonitor";
 
         void Invoke(::TufScreenControl::PowerMonitor::Handler const& handler) noexcept
         {

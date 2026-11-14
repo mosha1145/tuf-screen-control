@@ -2,13 +2,13 @@
 <!--
   ScreenControl.Imaging — 帧处理层（静态库）
   BGR 直入的 JPEG 编码 + 几何变换。不依赖 WinUI。
-  共享属性见 ..\..\Directory.Build.props
+  工程名保留 ScreenControl.* 作为文件标识，C++ 命名空间为 TufScreenControl::Imaging。
 -->
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup Label="Globals">
     <ProjectGuid>{7F3B5D22-1E42-4A63-AC8B-2D1E3F4A5B62}</ProjectGuid>
     <ProjectName>ScreenControl.Imaging</ProjectName>
-    <RootNamespace>ScreenControl.Imaging</RootNamespace>
+    <RootNamespace>TufScreenControl.Imaging</RootNamespace>
     <TargetName>$(ProjectName)</TargetName>
   </PropertyGroup>
 
