@@ -10,7 +10,6 @@
 #include "NativeTheme.h"
 #include "PowerMonitor.h"
 #include "TrayIcon.h"
-#include "SingleInstance.h"
 
 #include <memory>
 #include <winrt/Windows.Graphics.Imaging.h>
@@ -23,9 +22,6 @@ namespace winrt::TufScreenControl::implementation
     {
         MainWindow();
         ~MainWindow();
-
-        int32_t MyProperty();
-        void MyProperty(int32_t value);
 
         /// 当前实例（页面通过它访问播放器与共享 UI 句柄）。
         static MainWindow* Current() noexcept;
@@ -59,8 +55,8 @@ namespace winrt::TufScreenControl::implementation
 
         void ShutdownPlayer() noexcept;
 
-        /// 注册电源 / 会话事件（睡眠、关机、注销）与窗口关闭处理。
-        void SetupPowerEvents();
+        /// 注册设备插拔监听、单实例激活转发与窗口关闭处理。
+        void SetupSystemEvents();
 
         /// 启动时把配置里的显示参数与屏幕状态应用到设备。
         void ApplyPersistedDeviceState();

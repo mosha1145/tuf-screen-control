@@ -10,6 +10,7 @@
 #include "AppConfig.h"
 #include "PlaybackController.h"
 #include "UiHelpers.h"
+#include "App.xaml.h"
 #include "SettingsPage.xaml.h"
 #include "ScreenController.h"
 #include "FirmwareUpdater.h"
@@ -24,6 +25,7 @@
 #include <winrt/Windows.Graphics.Imaging.h>
 #include <winrt/Windows.Graphics.h>
 #include <winrt/Microsoft.UI.Xaml.Media.Animation.h>
+#include <winrt/Microsoft.Windows.AppLifecycle.h>
 #include <functional>
 #include <fstream>
 #include <memory>
@@ -41,16 +43,6 @@ namespace winrt::TufScreenControl::implementation
 
 static ::winrt::TufScreenControl::implementation::MainWindow* s_current = nullptr;
 
-
-    int32_t MainWindow::MyProperty()
-    {
-        throw hresult_not_implemented();
-    }
-
-    void MainWindow::MyProperty(int32_t /* value */)
-    {
-        throw hresult_not_implemented();
-    }
 
     MainWindow::MainWindow()
     {
@@ -80,8 +72,8 @@ static ::winrt::TufScreenControl::implementation::MainWindow* s_current = nullpt
         // 恢复上次的显示参数与屏幕开关状态
         ApplyPersistedDeviceState();
 
-        // 电源 / 会话事件（睡眠、关机、注销）与窗口关闭处理。
-        SetupPowerEvents();
+        // 设备插拔监听、单实例激活转发与窗口关闭处理。
+        SetupSystemEvents();
 
         // 托盘图标 + 关闭行为（隐藏到托盘 / 退出 / 询问）
         SetupTrayAndCloseBehavior();
@@ -455,44 +447,12 @@ static ::winrt::TufScreenControl::implementation::MainWindow* s_current = nullpt
     void MainWindow::ExitApplication()
     {
         m_exiting = true;
-
-        PrepareWindowForHide();
         m_trayIcon.Remove();
 
-        if (m_player)
-        {
-            m_player->RequestStop();    // 不 join，避免卡住
-        }
-
-        m_powerMonitor.Stop();
-
-        auto exitWindow = AppWindow();
-        auto doExit = [exitWindow]()
-        {
-            // DwmFlush 阻塞到 DWM 完成合成，确保实色底先上屏再隐藏退出。
-            ::DwmFlush();
-            if (exitWindow)
-            {
-                exitWindow.Hide();
-            }
-            ::DwmFlush();
-            ::ExitProcess(0);
-        };
-
-        auto dispatcher = DispatcherQueue();
-        if (dispatcher)
-        {
-            dispatcher.TryEnqueue(doExit);
-            return;
-        }
-
-        ::DwmFlush();
-        if (exitWindow)
-        {
-            exitWindow.Hide();
-        }
-        ::DwmFlush();
-        ::ExitProcess(0);
+        // 规范退出：关闭窗口（Microsoft.UI.Xaml.Window.Close），交给 Closed
+        // 里的优雅收尾走完 WinUI 的正常生命周期，最后一个窗口关闭后
+        // 框架结束消息循环，进程自然退出。
+        Close();
     }
 
     void MainWindow::ShowTrayMenu()
@@ -560,7 +520,7 @@ static ::winrt::TufScreenControl::implementation::MainWindow* s_current = nullpt
             break;
         }
     }
-    void MainWindow::SetupPowerEvents()
+    void MainWindow::SetupSystemEvents()
     {
         HWND hwnd = GetHwnd();
         if (hwnd == nullptr)
@@ -568,12 +528,7 @@ static ::winrt::TufScreenControl::implementation::MainWindow* s_current = nullpt
             return;
         }
 
-        // 只保留单实例激活消息；「智能关屏」电源联动已整体移除。
         ::TufScreenControl::PowerMonitor::Handlers handlers;
-
-        // 第二个实例启动时会广播这条消息，这里把窗口叫回来
-        handlers.activateMessage = ::TufScreenControl::SingleInstance::ActivateMessageId();
-        handlers.activate = [this]() { ShowFromTray(); };
 
         // 设备插拔：重新枚举设备（无需重启软件），并刷新界面上的连接状态
         handlers.deviceChanged = [this]()
@@ -587,21 +542,34 @@ static ::winrt::TufScreenControl::implementation::MainWindow* s_current = nullpt
 
         m_powerMonitor.Start(hwnd, handlers);
 
+        // 单实例：第二实例的激活被系统重定向到本进程时，把窗口叫回来。
+        // （Activated 在后台线程触发，必须封送到 UI 线程）
+        try
+        {
+            auto const keyInstance = winrt::Microsoft::Windows::AppLifecycle::AppInstance::
+                FindOrRegisterForKey(::TufScreenControl::kInstanceKey);
+            if (keyInstance)
+            {
+                keyInstance.Activated([this](auto&&, auto&&)
+                {
+                    if (auto dispatcher = DispatcherQueue())
+                    {
+                        dispatcher.TryEnqueue([this]() { ShowFromTray(); });
+                    }
+                });
+            }
+        }
+        catch (...)
+        {
+        }
+
         Closed([this](auto&&, auto&&)
         {
+            // WinUI 默认生命周期：先摘掉电源/会话事件监听，再优雅停播放器
+            // （请求停止 → join 工作线程 → 关闭 HID 句柄），
+            // 最后一个窗口关闭后框架结束消息循环，进程正常退出。
             m_powerMonitor.Stop();
-
-            // 关键：不要在这里做「优雅关闭」。
-            // ShutdownPlayer() 会 Stop() -> join 工作线程，而线程可能正卡在
-            // WriteFile 上（设备忙 / 已拔掉），join 不返回 -> 关闭流程卡住 ->
-            // 进程带着 HID 句柄残留 -> 设备一直停在最后一帧，也不会按固件超时
-            // 回到自带动画；之后再开官方 InfoHub，刚点亮就被我们残留的命令干扰。
-            // 直接把播放器停掉并结束进程，由操作系统立即回收全部句柄。
-            if (m_player)
-            {
-                m_player->RequestStop();   // 只置停止标志，不等待线程
-            }
-            ExitProcess(0);
+            ShutdownPlayer();
         });
     }
     HWND MainWindow::GetHwnd() const noexcept

@@ -141,7 +141,6 @@
     <ClInclude Include="NativeTheme.h" />
     <ClInclude Include="PowerMonitor.h" />
     <ClInclude Include="TrayIcon.h" />
-    <ClInclude Include="SingleInstance.h" />
     <ClInclude Include="UiHelpers.h" />
     <ClInclude Include="FirmwareUpdater.h" />
   </ItemGroup>
@@ -170,7 +169,6 @@
     <ClCompile Include="NativeTheme.cpp" />
     <ClCompile Include="PowerMonitor.cpp" />
     <ClCompile Include="TrayIcon.cpp" />
-    <ClCompile Include="SingleInstance.cpp" />
     <ClCompile Include="UiHelpers.cpp" />
     <ClCompile Include="$(GeneratedFilesDir)module.g.cpp" />
   </ItemGroup>

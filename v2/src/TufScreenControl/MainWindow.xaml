@@ -27,7 +27,7 @@
                 Margin="16,0,0,0"
                 VerticalAlignment="Center"
                 Spacing="10">
-                <FontIcon Glyph="&#xE7F4;" FontSize="15" />
+                <FontIcon Glyph="&#xE7F4;" FontSize="15" AutomationProperties.AccessibilityView="Raw" />
                 <TextBlock
                     Text="TUF Screen Control"
                     FontSize="13"

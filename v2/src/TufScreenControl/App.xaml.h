@@ -1,7 +1,12 @@
 #pragma once
 
 #include "App.xaml.g.h"
-#include "SingleInstance.h"
+
+namespace TufScreenControl
+{
+    /// 单实例 key（App 注册 / 第二实例重定向 / MainWindow 订阅激活都引用它）。
+    inline constexpr wchar_t kInstanceKey[] = L"TufScreenControl.MainInstance";
+}
 
 namespace winrt::TufScreenControl::implementation
 {
@@ -15,8 +20,5 @@ namespace winrt::TufScreenControl::implementation
 
     private:
         winrt::Microsoft::UI::Xaml::Window window{ nullptr };
-
-        // 单实例守卫：第二个实例启动时通知已有实例把窗口叫出来，然后自己退出。
-        ::TufScreenControl::SingleInstance m_singleInstance;
     };
 }

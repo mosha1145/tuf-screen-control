@@ -51,7 +51,8 @@
                                 x:Name="PreviewImage"
                                 Stretch="Uniform"
                                 HorizontalAlignment="Stretch"
-                                VerticalAlignment="Stretch" />
+                                VerticalAlignment="Stretch"
+                                AutomationProperties.Name="设备屏幕预览" />
                         </Border>
 
                         <TextBlock
@@ -95,7 +96,8 @@
                             <Slider
                                 x:Name="BrightnessSlider"
                                 Minimum="0"
-                                Maximum="100" />
+                                Maximum="100"
+                                AutomationProperties.Name="亮度" />
                         </StackPanel>
 
                         <ComboBox x:Name="FitModeBox" Header="图像适应">
@@ -137,13 +139,13 @@
 
                         <StackPanel Spacing="6">
                             <TextBlock Text="照片" />
-                            <ListView x:Name="PhotoList" Height="180" />
+                            <ListView x:Name="PhotoList" Height="180" AutomationProperties.Name="照片素材列表" />
                             <Button x:Name="PlayPhotoButton" Content="播放选中的照片" />
                         </StackPanel>
 
                         <StackPanel Grid.Column="1" Spacing="6">
                             <TextBlock Text="视频" />
-                            <ListView x:Name="VideoList" Height="180" />
+                            <ListView x:Name="VideoList" Height="180" AutomationProperties.Name="视频素材列表" />
                             <Button x:Name="PlayVideoButton" Content="播放选中的视频" />
                         </StackPanel>
                     </Grid>

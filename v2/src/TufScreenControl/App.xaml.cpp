@@ -9,8 +9,11 @@
 #include <filesystem>
 #include <fstream>
 
+#include <winrt/Microsoft.Windows.AppLifecycle.h>
+
 using namespace winrt;
 using namespace Microsoft::UI::Xaml;
+using namespace Microsoft::Windows::AppLifecycle;
 
 namespace winrt::TufScreenControl::implementation
 {
@@ -61,6 +64,26 @@ namespace winrt::TufScreenControl::implementation
 
     namespace
     {
+        /// 把激活参数重定向给已运行的实例。
+        ///
+        /// 官方文档范式是「RedirectActivationToAsync + 等完成事件」。实测在
+        /// 免打包（unpackaged）模式下，接收方（key 实例）确实会收到 Activated
+        /// 事件并把窗口叫回来，但发起方的异步完成通知不会回来——死等会永久挂住
+        /// 第二个实例。所以这里给等待加超时：拿到完成通知就立即走，
+        /// 超时（说明通知丢了，激活其实已经送达）同样退出，不阻塞用户。
+        void RedirectActivationTo(AppActivationArguments const& args, AppInstance const& target)
+        {
+            constexpr DWORD kRedirectTimeoutMs = 3000;
+
+            winrt::handle ready{ ::CreateEventW(nullptr, FALSE, FALSE, nullptr) };
+            target.RedirectActivationToAsync(args).Completed(
+                [handle = ready.get()](auto&&, auto&&)
+                {
+                    ::SetEvent(handle);
+                });
+            ::WaitForSingleObject(ready.get(), kRedirectTimeoutMs);
+        }
+
         /// 把强调色注入到应用级资源。
         ///
         /// 这是 WinUI 的「系统强调色」机制：控件（开关、复选框、选中态、
@@ -120,10 +143,24 @@ namespace winrt::TufScreenControl::implementation
             ::ExitProcess(0);
         }
 
-        // 单实例：已有实例在运行时，通知它把窗口叫出来，然后本进程直接退出。
-        if (!m_singleInstance.Acquire(L"TufScreenControl"))
+        // 单实例（Windows App SDK 官方 AppLifecycle API）：
+        //   FindOrRegisterForKey 注册 key；若当前进程不是 key 的拥有者，
+        //   说明已有实例在跑，把本次激活重定向过去后退出。
+        try
         {
-            ::ExitProcess(0);
+            auto const activationArgs = AppInstance::GetCurrent().GetActivatedEventArgs();
+            auto const keyInstance = AppInstance::FindOrRegisterForKey(
+                ::TufScreenControl::kInstanceKey);
+
+            if (!keyInstance.IsCurrent())
+            {
+                RedirectActivationTo(activationArgs, keyInstance);
+                ::ExitProcess(0);
+            }
+        }
+        catch (...)
+        {
+            // AppLifecycle 不可用时退化为允许多开，不影响主功能。
         }
 
         // 强调色必须在创建任何控件之前注入，否则已经实例化的控件不会跟随。

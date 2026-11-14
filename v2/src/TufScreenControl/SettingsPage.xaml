@@ -52,12 +52,13 @@
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
 
-                        <FontIcon Glyph="&#xE7E8;" Style="{StaticResource SettingRowIconStyle}" />
+                        <FontIcon Glyph="&#xE7E8;" Style="{StaticResource SettingRowIconStyle}" AutomationProperties.AccessibilityView="Raw" />
                         <TextBlock Grid.Column="1" Text="开机自启动" Style="{StaticResource SettingRowTitleStyle}" />
                         <TextBlock x:Name="AutoStartStatus" Grid.Column="2" Text="关" Style="{StaticResource SettingRowStatusStyle}" />
                         <ToggleSwitch
                             x:Name="AutoStartSwitch"
                             Grid.Column="3"
+                            AutomationProperties.Name="开机自启动"
                             MinWidth="0"
                             OnContent=""
                             OffContent=""
@@ -74,9 +75,9 @@
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
 
-                        <FontIcon Glyph="&#xE8BB;" Style="{StaticResource SettingRowIconStyle}" />
+                        <FontIcon Glyph="&#xE8BB;" Style="{StaticResource SettingRowIconStyle}" AutomationProperties.AccessibilityView="Raw" />
                         <TextBlock Grid.Column="1" Text="关闭窗口时" Style="{StaticResource SettingRowTitleStyle}" />
-                        <ComboBox x:Name="CloseChoice" Grid.Column="2" MinWidth="200" HorizontalAlignment="Right" VerticalAlignment="Center">
+                        <ComboBox x:Name="CloseChoice" Grid.Column="2" MinWidth="200" HorizontalAlignment="Right" VerticalAlignment="Center" AutomationProperties.Name="关闭窗口时">
                             <x:String>隐藏到系统托盘</x:String>
                             <x:String>退出程序</x:String>
                         </ComboBox>
@@ -103,13 +104,13 @@
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
 
-                            <FontIcon Glyph="&#xE706;" Style="{StaticResource SettingRowIconStyle}" />
+                            <FontIcon Glyph="&#xE706;" Style="{StaticResource SettingRowIconStyle}" AutomationProperties.AccessibilityView="Raw" />
                             <TextBlock Grid.Column="1" Text="应用主题" Style="{StaticResource SettingRowTitleStyle}" />
                             <TextBlock x:Name="ThemeValue" Grid.Column="2" Text="使用系统设置" Style="{StaticResource SettingRowValueStyle}" />
                         </Grid>
                     </Expander.Header>
 
-                    <RadioButtons x:Name="ThemeChoice" Margin="32,8,0,16">
+                    <RadioButtons x:Name="ThemeChoice" Margin="32,8,0,16" AutomationProperties.Name="应用主题">
                         <x:String>浅色</x:String>
                         <x:String>深色</x:String>
                         <x:String>使用系统设置</x:String>
@@ -125,13 +126,13 @@
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
 
-                            <FontIcon Glyph="&#xE790;" Style="{StaticResource SettingRowIconStyle}" />
+                            <FontIcon Glyph="&#xE790;" Style="{StaticResource SettingRowIconStyle}" AutomationProperties.AccessibilityView="Raw" />
                             <TextBlock Grid.Column="1" Text="主题色" Style="{StaticResource SettingRowTitleStyle}" />
                             <TextBlock x:Name="ThemeColorValue" Grid.Column="2" Text="使用系统设置" Style="{StaticResource SettingRowValueStyle}" />
                         </Grid>
                     </Expander.Header>
 
-                    <RadioButtons x:Name="ThemeColorChoice" Margin="32,8,0,16">
+                    <RadioButtons x:Name="ThemeColorChoice" Margin="32,8,0,16" AutomationProperties.Name="主题色">
                         <x:String>TUF GAMING</x:String>
                         <x:String>使用系统设置</x:String>
                     </RadioButtons>
@@ -157,7 +158,7 @@
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
 
-                        <FontIcon Glyph="&#xE708;" Style="{StaticResource SettingRowIconStyle}" />
+                        <FontIcon Glyph="&#xE708;" Style="{StaticResource SettingRowIconStyle}" AutomationProperties.AccessibilityView="Raw" />
 
                         <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
                             <TextBlock Text="睡眠模式" />
@@ -168,6 +169,7 @@
                         <ToggleSwitch
                             x:Name="SleepToggle"
                             Grid.Column="3"
+                            AutomationProperties.Name="睡眠模式"
                             MinWidth="0"
                             OnContent=""
                             OffContent=""
@@ -196,7 +198,7 @@
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
 
-                        <FontIcon Glyph="&#xE895;" Style="{StaticResource SettingRowIconStyle}" />
+                        <FontIcon Glyph="&#xE895;" Style="{StaticResource SettingRowIconStyle}" AutomationProperties.AccessibilityView="Raw" />
 
                         <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
                             <TextBlock Text="自动检测更新" />
@@ -207,6 +209,7 @@
                         <ToggleSwitch
                             x:Name="UpdateToggle"
                             Grid.Column="3"
+                            AutomationProperties.Name="自动检测更新"
                             MinWidth="0"
                             OnContent=""
                             OffContent=""
@@ -224,14 +227,14 @@
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
 
-                            <FontIcon Glyph="&#xE823;" Style="{StaticResource SettingRowIconStyle}" />
+                            <FontIcon Glyph="&#xE823;" Style="{StaticResource SettingRowIconStyle}" AutomationProperties.AccessibilityView="Raw" />
                             <TextBlock Grid.Column="1" Text="检查频率" Style="{StaticResource SettingRowTitleStyle}" />
                             <TextBlock x:Name="FreqValue" Grid.Column="2" Text="每次启动" Style="{StaticResource SettingRowValueStyle}" />
                         </Grid>
                     </Expander.Header>
 
                     <StackPanel Margin="32,8,0,16" Spacing="12">
-                        <ComboBox x:Name="FreqBox" MinWidth="160" HorizontalAlignment="Left">
+                        <ComboBox x:Name="FreqBox" MinWidth="160" HorizontalAlignment="Left" AutomationProperties.Name="检查频率">
                             <x:String>每次启动</x:String>
                             <x:String>每天</x:String>
                             <x:String>每周</x:String>
@@ -246,7 +249,8 @@
                                 Width="24"
                                 Height="24"
                                 IsActive="False"
-                                Visibility="Collapsed" />
+                                Visibility="Collapsed"
+                                AutomationProperties.Name="正在检查更新" />
                         </StackPanel>
                     </StackPanel>
                 </Expander>
