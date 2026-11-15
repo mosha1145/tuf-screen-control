@@ -11,6 +11,7 @@
 #include "PlaybackController.h"
 #include "UiHelpers.h"
 #include "App.xaml.h"
+#include "StartupTrace.h"
 #include "SettingsPage.xaml.h"
 #include "ScreenController.h"
 #include "FirmwareUpdater.h"
@@ -49,11 +50,14 @@ static ::winrt::TufScreenControl::implementation::MainWindow* s_current = nullpt
     {
         // 从 MainWindow.xaml 加载界面（RootGrid / AppTitleBar / NavView / ContentFrame）。
         InitializeComponent();
+        ::TufScreenControl::TraceStartup("MainWindow ctor: InitializeComponent done");
 
         s_current = this;
 
         // 标题栏与导航事件（布局全部在 XAML 里声明）。
+        ::TufScreenControl::TraceStartup("MainWindow ctor: before backdrop/titlebar");
         SetupBackdropAndTitleBar();
+        ::TufScreenControl::TraceStartup("MainWindow ctor: backdrop/titlebar done");
 
         NavView().SelectionChanged(
             [this](NavigationView const&, NavigationViewSelectionChangedEventArgs const& args)
@@ -69,21 +73,26 @@ static ::winrt::TufScreenControl::implementation::MainWindow* s_current = nullpt
         // 启动时按配置恢复主题（含「跟随系统」）。
         m_theme = ::TufScreenControl::NativeTheme::Parse(::TufScreenControl::Ui::Config().Data().appTheme);
         ApplyTheme(m_theme, false);
+        ::TufScreenControl::TraceStartup("MainWindow ctor: theme applied");
 
         // 恢复上次的显示参数与屏幕开关状态
         ApplyPersistedDeviceState();
+        ::TufScreenControl::TraceStartup("MainWindow ctor: persisted device state applied");
 
         // 设备插拔监听、单实例激活转发与窗口关闭处理。
         SetupSystemEvents();
+        ::TufScreenControl::TraceStartup("MainWindow ctor: system events setup");
 
         // 托盘图标 + 关闭行为（隐藏到托盘 / 退出 / 询问）
         SetupTrayAndCloseBehavior();
+        ::TufScreenControl::TraceStartup("MainWindow ctor: tray setup done");
 
         // 首次导航放到窗口完成第一次布局之后。
         // 在构造函数里导航时 Frame 还是 0×0、窗口未显示，
         // EntranceNavigationTransitionInfo 没有可播放的目标，冷启动就没有入场动画。
         RootGrid().Loaded([this](auto&&, auto&&)
         {
+            ::TufScreenControl::TraceStartup("RootGrid Loaded fired");
             if (!m_initialNavigationDone)
             {
                 m_initialNavigationDone = true;
@@ -539,19 +548,29 @@ static ::winrt::TufScreenControl::implementation::MainWindow* s_current = nullpt
         m_powerMonitor.Start(hwnd, handlers);
 
         // 单实例：第二实例的激活被系统重定向到本进程时，把窗口叫回来。
-        // （Activated 在后台线程触发，必须封送到 UI 线程）
+        //
+        // 关键：Activated 是在**后台线程**触发的。Window 不是 agile 对象，
+        // 在别的线程上直接调它的成员（如 DispatcherQueue()）属于未定义行为，
+        // 实测会以 Microsoft.UI.Xaml.dll 里的访问冲突崩掉整个进程。
+        // 因此必须在 UI 线程上先把 DispatcherQueue 取出来再捕获进回调——
+        // DispatcherQueue 本身是 agile 的，从任意线程 TryEnqueue 都安全。
         try
         {
             auto const keyInstance = winrt::Microsoft::Windows::AppLifecycle::AppInstance::
                 FindOrRegisterForKey(::TufScreenControl::kInstanceKey);
-            if (keyInstance)
+            if (auto const queue = DispatcherQueue())
             {
-                keyInstance.Activated([this](auto&&, auto&&)
+                keyInstance.Activated([this, queue](auto&&, auto&&)
                 {
-                    if (auto dispatcher = DispatcherQueue())
+                    ::TufScreenControl::TraceStartup("Activated event fired (background thread)");
+                    queue.TryEnqueue([this]()
                     {
-                        dispatcher.TryEnqueue([this]() { ShowFromTray(); });
-                    }
+                        ::TufScreenControl::TraceStartup("Activated: running on UI thread");
+                        if (!m_exiting)
+                        {
+                            ShowFromTray();
+                        }
+                    });
                 });
             }
         }
@@ -717,16 +736,20 @@ static ::winrt::TufScreenControl::implementation::MainWindow* s_current = nullpt
             m_player = std::make_unique<::TufScreenControl::Core::PlaybackController>();
             m_player->OpenDevice();
 
+            // 回调都在播放工作线程触发。Window 不是 agile 对象，不能在那个线程
+            // 上调 DispatcherQueue()（未定义行为，实测会以 Microsoft.UI.Xaml.dll
+            // 里的访问冲突崩溃）。所以在 UI 线程上先取出来，捕获进回调再用。
+            auto const queue = DispatcherQueue();
+
             // 状态回调在工作线程触发，需封送到 UI 线程。
-            m_player->SetStatusCallback([this](std::wstring const& message)
+            m_player->SetStatusCallback([this, queue](std::wstring const& message)
             {
-                auto dispatcher = DispatcherQueue();
-                if (!dispatcher)
+                if (!queue)
                 {
                     return;
                 }
                 const auto text = winrt::hstring(message);
-                dispatcher.TryEnqueue([this, text]()
+                queue.TryEnqueue([this, text]()
                 {
                     if (m_statusText)
                     {
@@ -737,7 +760,7 @@ static ::winrt::TufScreenControl::implementation::MainWindow* s_current = nullpt
 
             // 预览回调同样在工作线程触发：复制像素后封送到 UI 线程渲染。
             m_player->SetPreviewCallback(
-                [this](std::uint8_t const* pixels, int width, int height, int stride)
+                [this, queue](std::uint8_t const* pixels, int width, int height, int stride)
                 {
                     if (pixels == nullptr || width <= 0 || height <= 0 || stride <= 0)
                     {
@@ -746,12 +769,11 @@ static ::winrt::TufScreenControl::implementation::MainWindow* s_current = nullpt
                     auto frame = std::make_shared<std::vector<std::uint8_t>>(
                         pixels, pixels + static_cast<size_t>(stride) * static_cast<size_t>(height));
 
-                    auto dispatcher = DispatcherQueue();
-                    if (!dispatcher)
+                    if (!queue)
                     {
                         return;
                     }
-                    dispatcher.TryEnqueue([this, frame, width, height]()
+                    queue.TryEnqueue([this, frame, width, height]()
                     {
                         UpdatePreview(*frame, width, height);
                     });

@@ -5,6 +5,7 @@
 #include "AppConfig.h"
 #include "FirmwareUpdater.h"
 #include "NativeTheme.h"
+#include "StartupTrace.h"
 
 #include <filesystem>
 #include <fstream>
@@ -19,10 +20,13 @@ namespace winrt::TufScreenControl::implementation
 {
     App::App()
     {
+        ::TufScreenControl::TraceStartup("App ctor enter");
+
         // 与官方 WinUI 3 C++ 模板一致：在构造函数里加载 App.xaml
         // （XamlControlsResources + 应用级样式表）。生成的 InitializeComponent
         // 自带 _contentLoaded 幂等保护，重复调用无副作用。
         InitializeComponent();
+        ::TufScreenControl::TraceStartup("App ctor: InitializeComponent done");
 
         // 全局兜底：把未处理异常写进 exe 同目录的 crash.log，
         // 否则 0xC000027B（stowed exception）在事件日志里只有模块偏移，无法定位。
@@ -78,11 +82,14 @@ namespace winrt::TufScreenControl::implementation
             try
             {
                 co_await target.RedirectActivationToAsync(args);
+                ::TufScreenControl::TraceStartup("redirect: co_await completed");
             }
             catch (...)
             {
                 // 交接失败也只能退出：另一实例已在运行，不能再开第二个窗口。
+                ::TufScreenControl::TraceStartup("redirect: co_await threw");
             }
+            ::TufScreenControl::TraceStartup("redirect: exiting process");
             ::ExitProcess(0);
         }
 
@@ -150,21 +157,27 @@ namespace winrt::TufScreenControl::implementation
         //   说明已有实例在跑，把本次激活重定向过去后退出。
         try
         {
+            ::TufScreenControl::TraceStartup("OnLaunched: single-instance check begin");
             auto const activationArgs = AppInstance::GetCurrent().GetActivatedEventArgs();
             auto const keyInstance = AppInstance::FindOrRegisterForKey(
                 ::TufScreenControl::kInstanceKey);
+            ::TufScreenControl::TraceStartup(keyInstance.IsCurrent()
+                                                 ? "OnLaunched: is key owner (continue)"
+                                                 : "OnLaunched: not key owner (redirect)");
 
             if (!keyInstance.IsCurrent())
             {
                 // 第二实例：把激活交给已有实例，交接完成后由协程退出本进程。
                 // 这里必须 return，不能继续往下创建窗口。
                 RedirectActivationAndExit(activationArgs, keyInstance);
+                ::TufScreenControl::TraceStartup("OnLaunched: redirect started, returning");
                 return;
             }
         }
         catch (...)
         {
             // AppLifecycle 不可用时退化为允许多开，不影响主功能。
+            ::TufScreenControl::TraceStartup("OnLaunched: applifecycle threw, continue");
         }
 
         // 强调色必须在创建任何控件之前注入，否则已经实例化的控件不会跟随。
@@ -184,7 +197,10 @@ namespace winrt::TufScreenControl::implementation
         {
         }
 
+        ::TufScreenControl::TraceStartup("OnLaunched: creating MainWindow");
         window = make<MainWindow>();
+        ::TufScreenControl::TraceStartup("OnLaunched: MainWindow created");
         window.Activate();
+        ::TufScreenControl::TraceStartup("OnLaunched: Activate returned");
     }
 }
