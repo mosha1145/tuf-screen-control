@@ -5,7 +5,6 @@
 #include "AppConfig.h"
 #include "FirmwareUpdater.h"
 #include "NativeTheme.h"
-#include "StartupTrace.h"
 
 #include <filesystem>
 #include <fstream>
@@ -20,13 +19,11 @@ namespace winrt::TufScreenControl::implementation
 {
     App::App()
     {
-        ::TufScreenControl::TraceStartup("App ctor enter");
 
         // 与官方 WinUI 3 C++ 模板一致：在构造函数里加载 App.xaml
         // （XamlControlsResources + 应用级样式表）。生成的 InitializeComponent
         // 自带 _contentLoaded 幂等保护，重复调用无副作用。
         InitializeComponent();
-        ::TufScreenControl::TraceStartup("App ctor: InitializeComponent done");
 
         // 全局兜底：把未处理异常写进 exe 同目录的 crash.log，
         // 否则 0xC000027B（stowed exception）在事件日志里只有模块偏移，无法定位。
@@ -107,13 +104,10 @@ namespace winrt::TufScreenControl::implementation
             try
             {
                 co_await target.RedirectActivationToAsync(args);
-                ::TufScreenControl::TraceStartup("raise: co_await completed");
             }
             catch (...)
             {
-                ::TufScreenControl::TraceStartup("raise: co_await threw");
             }
-            ::TufScreenControl::TraceStartup("raise: exiting process");
             ::ExitProcess(0);
         }
 
@@ -178,11 +172,9 @@ namespace winrt::TufScreenControl::implementation
 
         // 单实例判定：命名互斥量（崩溃安全，见 AcquireInstanceMutex 的注释）。
         // 已有存活实例时，只做「把它的窗口叫到前面」这个附加动作，然后退出。
-        ::TufScreenControl::TraceStartup("OnLaunched: instance mutex check");
         static HANDLE const instanceMutex = AcquireInstanceMutex();
         if (instanceMutex == nullptr)
         {
-            ::TufScreenControl::TraceStartup("OnLaunched: another instance alive, raising it");
             try
             {
                 RaiseExistingInstanceAndExit(AppInstance::GetCurrent().GetActivatedEventArgs(),
@@ -192,10 +184,8 @@ namespace winrt::TufScreenControl::implementation
             catch (...)
             {
             }
-            ::TufScreenControl::TraceStartup("OnLaunched: exiting (second instance)");
             ::ExitProcess(0);
         }
-        ::TufScreenControl::TraceStartup("OnLaunched: primary instance (continue)");
 
         // 强调色必须在创建任何控件之前注入，否则已经实例化的控件不会跟随。
         // 因此主题色的改动是「重启后生效」。
@@ -214,10 +204,7 @@ namespace winrt::TufScreenControl::implementation
         {
         }
 
-        ::TufScreenControl::TraceStartup("OnLaunched: creating MainWindow");
         window = make<MainWindow>();
-        ::TufScreenControl::TraceStartup("OnLaunched: MainWindow created");
         window.Activate();
-        ::TufScreenControl::TraceStartup("OnLaunched: Activate returned");
     }
 }

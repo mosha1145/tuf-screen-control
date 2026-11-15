@@ -11,7 +11,6 @@
 #include "PlaybackController.h"
 #include "UiHelpers.h"
 #include "App.xaml.h"
-#include "StartupTrace.h"
 #include "SettingsPage.xaml.h"
 #include "ScreenController.h"
 #include "FirmwareUpdater.h"
@@ -50,14 +49,11 @@ static ::winrt::TufScreenControl::implementation::MainWindow* s_current = nullpt
     {
         // 从 MainWindow.xaml 加载界面（RootGrid / AppTitleBar / NavView / ContentFrame）。
         InitializeComponent();
-        ::TufScreenControl::TraceStartup("MainWindow ctor: InitializeComponent done");
 
         s_current = this;
 
         // 标题栏与导航事件（布局全部在 XAML 里声明）。
-        ::TufScreenControl::TraceStartup("MainWindow ctor: before backdrop/titlebar");
         SetupBackdropAndTitleBar();
-        ::TufScreenControl::TraceStartup("MainWindow ctor: backdrop/titlebar done");
 
         NavView().SelectionChanged(
             [this](NavigationView const&, NavigationViewSelectionChangedEventArgs const& args)
@@ -73,26 +69,21 @@ static ::winrt::TufScreenControl::implementation::MainWindow* s_current = nullpt
         // 启动时按配置恢复主题（含「跟随系统」）。
         m_theme = ::TufScreenControl::NativeTheme::Parse(::TufScreenControl::Ui::Config().Data().appTheme);
         ApplyTheme(m_theme, false);
-        ::TufScreenControl::TraceStartup("MainWindow ctor: theme applied");
 
         // 恢复上次的显示参数与屏幕开关状态
         ApplyPersistedDeviceState();
-        ::TufScreenControl::TraceStartup("MainWindow ctor: persisted device state applied");
 
         // 设备插拔监听、单实例激活转发与窗口关闭处理。
         SetupSystemEvents();
-        ::TufScreenControl::TraceStartup("MainWindow ctor: system events setup");
 
         // 托盘图标 + 关闭行为（隐藏到托盘 / 退出 / 询问）
         SetupTrayAndCloseBehavior();
-        ::TufScreenControl::TraceStartup("MainWindow ctor: tray setup done");
 
         // 首次导航放到窗口完成第一次布局之后。
         // 在构造函数里导航时 Frame 还是 0×0、窗口未显示，
         // EntranceNavigationTransitionInfo 没有可播放的目标，冷启动就没有入场动画。
         RootGrid().Loaded([this](auto&&, auto&&)
         {
-            ::TufScreenControl::TraceStartup("RootGrid Loaded fired");
             if (!m_initialNavigationDone)
             {
                 m_initialNavigationDone = true;
@@ -275,7 +266,6 @@ static ::winrt::TufScreenControl::implementation::MainWindow* s_current = nullpt
             {
                 if (m_exiting)
                 {
-                    ::TufScreenControl::TraceStartup("Closing: m_exiting, allow");
                     return;   // 真退出：放行，交给 Closed 处理
                 }
 
@@ -285,11 +275,6 @@ static ::winrt::TufScreenControl::implementation::MainWindow* s_current = nullpt
                 {
                     action = L"ask";   // 首次关闭一律询问
                 }
-                ::TufScreenControl::TraceStartup(
-                    action == L"tray" ? "Closing: branch=tray"
-                    : action == L"exit" ? "Closing: branch=exit"
-                                        : "Closing: branch=ask");
-
                 if (action == L"tray")
                 {
                     if (!m_trayAvailable)
@@ -378,7 +363,6 @@ static ::winrt::TufScreenControl::implementation::MainWindow* s_current = nullpt
     }
     void MainWindow::ShowFromTray()
     {
-        ::TufScreenControl::TraceStartup("ShowFromTray enter");
 
         HWND hwnd = GetHwnd();
         const bool hidden = (hwnd == nullptr) || !::IsWindowVisible(hwnd);
@@ -405,7 +389,6 @@ static ::winrt::TufScreenControl::implementation::MainWindow* s_current = nullpt
                 root.Background(nullptr);
             }
             SystemBackdrop(MicaBackdrop{});
-            ::TufScreenControl::TraceStartup("ShowFromTray: backdrop restored");
         }
 
         if (hwnd != nullptr)
@@ -415,7 +398,6 @@ static ::winrt::TufScreenControl::implementation::MainWindow* s_current = nullpt
             if (minimized)
             {
                 ::ShowWindow(hwnd, SW_RESTORE);
-                ::TufScreenControl::TraceStartup("ShowFromTray: restored from minimized");
             }
             Activate();
             ::SetForegroundWindow(hwnd);
@@ -425,7 +407,6 @@ static ::winrt::TufScreenControl::implementation::MainWindow* s_current = nullpt
             Activate();
         }
 
-        ::TufScreenControl::TraceStartup("ShowFromTray done");
     }
 
     void MainWindow::ShowClosePrompt()
@@ -624,10 +605,8 @@ static ::winrt::TufScreenControl::implementation::MainWindow* s_current = nullpt
             {
                 keyInstance.Activated([this, queue](auto&&, auto&&)
                 {
-                    ::TufScreenControl::TraceStartup("Activated event fired (background thread)");
                     queue.TryEnqueue([this]()
                     {
-                        ::TufScreenControl::TraceStartup("Activated: running on UI thread");
                         if (!m_exiting)
                         {
                             ShowFromTray();
