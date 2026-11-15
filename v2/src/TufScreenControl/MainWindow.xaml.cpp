@@ -372,8 +372,10 @@ static ::winrt::TufScreenControl::implementation::MainWindow* s_current = nullpt
         if (HWND hwnd = GetHwnd())
         {
             ::SetForegroundWindow(hwnd);
-            ::ShowWindow(hwnd, SW_SHOW);
-            ::ShowWindow(hwnd, SW_RESTORE);
+            // 注意：这里不要再调 ShowWindow(SW_RESTORE)。
+            // SW_RESTORE 的语义是「恢复成原始大小和位置」，会把最大化/贴边分屏
+            // 的窗口打回普通尺寸——表现为从托盘回来时窗口位置和分屏状态丢了。
+            // AppWindow.Show() + Activate() 已经足够，位置与最大/吸附状态由系统保留。
         }
     }
 
