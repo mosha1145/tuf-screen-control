@@ -21,7 +21,11 @@ namespace winrt::TufScreenControl::implementation
     {
         InitializeComponent();
         // 页面缓存：切换页面时复用同一实例，避免每次重建整棵 UI 树（内存持续上涨的主因）
-        NavigationCacheMode(Microsoft::UI::Xaml::Navigation::NavigationCacheMode::Required);
+        // 注意：**不要**开启 NavigationCacheMode::Required（页面缓存）。
+        // 实测：开了之后进程退出时必崩，退出码固定 0xC0000005，
+        // dump 显示 DisplayPage 的最后一个引用在 Microsoft.UI.Xaml.dll 里析构时炸掉；
+        // 关掉缓存（保持默认 Disabled）退出码为 0。省下的那点切页重建开销
+        // 不值得换一个必现的退出崩溃。
 
         // ---------------- 预览 ----------------
         m_previewSource = Media::Imaging::SoftwareBitmapSource{};

@@ -68,32 +68,62 @@ namespace winrt::TufScreenControl::implementation
 
     namespace
     {
-        /// 把激活参数重定向给已运行的实例，交接完成后退出本进程。
+        /// 单实例守卫（命名互斥量）。
         ///
-        /// 用 C++/WinRT 协程 co_await，不做任何同步等待、也不设超时：
-        ///  - 同步等（WaitForSingleObject）会卡死：本线程是 STA，完成回调要靠 COM
-        ///    封送回该套间，而同步等待不派发 COM 调用，回调永远排不上队。
-        ///  - co_await 把续体挂到当前套间的 DispatcherQueue 上，OnLaunched 返回后
-        ///    消息循环已经在跑，正常情况几十毫秒就完成并退出。
+        /// 为什么用互斥量而不是 AppLifecycle 的 key 判单实例：
+        /// AppLifecycle 的 key 在进程**崩溃**后仍会挂在这个已死进程上，
+        /// 后续启动的进程都判定「已有实例」，把激活重定向给死人后挂住、
+        /// 什么都不显示 —— 表现为「双击两三次才打得开」。
+        /// 命名互斥量由内核持有，进程无论正常退出还是崩溃，句柄一关就释放，
+        /// 不会留下这种残留状态。
+        HANDLE AcquireInstanceMutex()
+        {
+            HANDLE mutex = ::CreateMutexW(nullptr, FALSE, L"Local\\TufScreenControl.SingleInstance");
+            if (mutex == nullptr)
+            {
+                return nullptr;
+            }
+            if (::GetLastError() == ERROR_ALREADY_EXISTS)
+            {
+                ::CloseHandle(mutex);
+                return nullptr;   // 已有存活实例
+            }
+            return mutex;         // 本进程是唯一实例
+        }
+
+        /// 尽力把已运行实例的窗口叫到前面（AppLifecycle 重定向，失败不影响退出）。
         ///
-        /// 注意：这里**不能**做「超时后接管」。之前试过，结果是对端已经崩溃、
-        /// key 还挂在死进程上时，每次启动都要等满超时才出窗口；两次快速双击会
-        /// 双双超时、双双开窗，直接变成多开。宁可什么都不做，也不能多开。
-        winrt::fire_and_forget RedirectActivationAndExit(AppActivationArguments args,
-                                                         AppInstance target)
+        /// 只在确认「已有存活实例」时才调用。用有界等待：完成通知万一没回来
+        /// （对端忙/正在退出），1.5 秒后照样退出——单实例已由互斥量保证，
+        /// 这里只是「把窗口提到前台」这个附加动作，不能因此拖慢或挂住启动。
+        void TryRaiseExistingInstance()
         {
             try
             {
-                co_await target.RedirectActivationToAsync(args);
-                ::TufScreenControl::TraceStartup("redirect: co_await completed");
+                auto const args = AppInstance::GetCurrent().GetActivatedEventArgs();
+                auto const target = AppInstance::FindOrRegisterForKey(
+                    ::TufScreenControl::kInstanceKey);
+                if (target.IsCurrent())
+                {
+                    return;   // 实际没有别的实例在跑，无事可做
+                }
+
+                winrt::handle ready{ ::CreateEventW(nullptr, FALSE, FALSE, nullptr) };
+                target.RedirectActivationToAsync(args).Completed(
+                    [handle = ready.get()](auto&&, auto&&)
+                    {
+                        ::SetEvent(handle);
+                    });
+
+                HANDLE handles[1]{ ready.get() };
+                DWORD index = 0;
+                ::CoWaitForMultipleHandles(
+                    COWAIT_DISPATCH_CALLS | COWAIT_DISPATCH_WINDOW_MESSAGES,
+                    1500, 1, handles, &index);
             }
             catch (...)
             {
-                // 交接失败也只能退出：另一实例已在运行，不能再开第二个窗口。
-                ::TufScreenControl::TraceStartup("redirect: co_await threw");
             }
-            ::TufScreenControl::TraceStartup("redirect: exiting process");
-            ::ExitProcess(0);
         }
 
         /// 把强调色注入到应用级资源。
@@ -155,33 +185,18 @@ namespace winrt::TufScreenControl::implementation
             ::ExitProcess(0);
         }
 
-        // 单实例（Windows App SDK 官方 AppLifecycle API）：
-        //   FindOrRegisterForKey 注册 key；若当前进程不是 key 的拥有者，
-        //   说明已有实例在跑，把本次激活重定向过去后退出。
-        try
+        // 单实例判定：命名互斥量（崩溃安全，见 AcquireInstanceMutex 的注释）。
+        // 已有存活实例时，只做「把它的窗口叫到前面」这个附加动作，然后退出。
+        ::TufScreenControl::TraceStartup("OnLaunched: instance mutex check");
+        static HANDLE const instanceMutex = AcquireInstanceMutex();
+        if (instanceMutex == nullptr)
         {
-            ::TufScreenControl::TraceStartup("OnLaunched: single-instance check begin");
-            auto const activationArgs = AppInstance::GetCurrent().GetActivatedEventArgs();
-            auto const keyInstance = AppInstance::FindOrRegisterForKey(
-                ::TufScreenControl::kInstanceKey);
-            ::TufScreenControl::TraceStartup(keyInstance.IsCurrent()
-                                                 ? "OnLaunched: is key owner (continue)"
-                                                 : "OnLaunched: not key owner (redirect)");
-
-            if (!keyInstance.IsCurrent())
-            {
-                // 第二实例：把激活交给已运行的实例，交接完成后由协程退出本进程。
-                // 必须 return，绝不能继续往下创建窗口（否则就是多开）。
-                RedirectActivationAndExit(activationArgs, keyInstance);
-                ::TufScreenControl::TraceStartup("OnLaunched: redirect started, returning");
-                return;
-            }
+            ::TufScreenControl::TraceStartup("OnLaunched: another instance alive, raising it");
+            TryRaiseExistingInstance();
+            ::TufScreenControl::TraceStartup("OnLaunched: exiting (second instance)");
+            ::ExitProcess(0);
         }
-        catch (...)
-        {
-            // AppLifecycle 不可用时退化为允许多开，不影响主功能。
-            ::TufScreenControl::TraceStartup("OnLaunched: applifecycle threw, continue");
-        }
+        ::TufScreenControl::TraceStartup("OnLaunched: primary instance (continue)");
 
         // 强调色必须在创建任何控件之前注入，否则已经实例化的控件不会跟随。
         // 因此主题色的改动是「重启后生效」。

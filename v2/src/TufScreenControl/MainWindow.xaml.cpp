@@ -297,10 +297,14 @@ static ::winrt::TufScreenControl::implementation::MainWindow* s_current = nullpt
                 }
                 else if (action == L"exit")
                 {
-                    // 不放行系统关闭：直接关闭会走 DWM 的窗口关闭合成，闪白。
-                    // 统一走 ExitApplication（先隐藏、等一帧、再退出）。
-                    args.Cancel(true);
-                    ExitApplication();
+                    // 按标准流程关闭：**不要** Cancel 之后再同步调 Close()。
+                    // 在 Closing 处理里重入关闭流程会打乱窗口的销毁顺序，
+                    // 后续 XAML 拆除阶段就会在 Microsoft.UI.Xaml.dll 里访问冲突
+                    // （实测退出码固定 0xC0000005，且每次必现）。
+                    // 这里只做退出前该做的事，然后放行，让系统自己关窗、
+                    // 触发 Closed、走正常收尾。
+                    m_exiting = true;
+                    m_trayIcon.Remove();
                 }
                 else
                 {
@@ -613,6 +617,7 @@ static ::winrt::TufScreenControl::implementation::MainWindow* s_current = nullpt
             // 最后一个窗口关闭后框架结束消息循环，进程正常退出。
             m_powerMonitor.Stop();
             ShutdownPlayer();
+            DetachPageUi();
         });
     }
     HWND MainWindow::GetHwnd() const noexcept

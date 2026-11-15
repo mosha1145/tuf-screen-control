@@ -36,7 +36,7 @@ namespace winrt::TufScreenControl::implementation
     SettingsPage::SettingsPage()
     {
         InitializeComponent();
-        NavigationCacheMode(Microsoft::UI::Xaml::Navigation::NavigationCacheMode::Required);
+        // 不开页面缓存：原因见 DisplayPage.xaml.cpp 里的说明（会导致退出崩溃）
 
         auto& config = Config().Data();
 
