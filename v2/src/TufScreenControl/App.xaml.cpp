@@ -68,29 +68,42 @@ namespace winrt::TufScreenControl::implementation
 
     namespace
     {
-        /// 把激活参数重定向给已运行的实例，交接完成后退出本进程。
+        /// 把激活交给已运行的实例。
         ///
-        /// 用 C++/WinRT 协程 co_await，不做任何同步等待——这是最贴合框架的做法：
-        ///  - 同步等（WaitForSingleObject）会卡死：本线程是 STA，完成回调要靠 COM
-        ///    封送回该套间，而同步等待不派发 COM 调用，回调永远排不上队。
-        ///  - co_await 把续体挂到当前套间的 DispatcherQueue 上，OnLaunched 返回后
-        ///    消息循环已经在跑，交接一完成就恢复执行。
-        /// 没有超时：交接完成才退出，语义正确，也不会留下看不见的僵尸进程。
-        winrt::fire_and_forget RedirectActivationAndExit(AppActivationArguments args,
-                                                         AppInstance target)
+        /// 返回值 = 交接是否真的完成：
+        ///   true  → 对端收下了，本进程应当退出；
+        ///   false → 对方没响应（多半是它已经崩了，单实例 key 还挂在死进程上），
+        ///           此时**不能**傻等，也不能直接退出——否则用户双击后什么都不会出现，
+        ///           表现为「要点两三次才打得开」。由调用方落下去接管成为主实例。
+        ///
+        /// 等待用 CoWaitForMultipleHandles 而不是 WaitForSingleObject：
+        /// 本线程是 STA，C++/WinRT 的完成回调要靠 COM 封送回该套间，
+        /// 普通等待不派发 COM 调用，回调永远排不上队（之前就栽在这里）。
+        bool TryRedirectActivation(AppActivationArguments const& args, AppInstance const& target)
         {
-            try
+            constexpr DWORD kOwnerRespondTimeoutMs = 5000;
+
+            winrt::handle ready{ ::CreateEventW(nullptr, FALSE, FALSE, nullptr) };
+            target.RedirectActivationToAsync(args).Completed(
+                [handle = ready.get()](auto&&, auto&&)
+                {
+                    ::SetEvent(handle);
+                });
+
+            HANDLE handles[1]{ ready.get() };
+            DWORD index = 0;
+            const DWORD wait = ::CoWaitForMultipleHandles(
+                COWAIT_DISPATCH_CALLS | COWAIT_DISPATCH_WINDOW_MESSAGES,
+                kOwnerRespondTimeoutMs, 1, handles, &index);
+
+            if (wait == WAIT_OBJECT_0)
             {
-                co_await target.RedirectActivationToAsync(args);
-                ::TufScreenControl::TraceStartup("redirect: co_await completed");
+                ::TufScreenControl::TraceStartup("redirect: owner accepted activation");
+                return true;
             }
-            catch (...)
-            {
-                // 交接失败也只能退出：另一实例已在运行，不能再开第二个窗口。
-                ::TufScreenControl::TraceStartup("redirect: co_await threw");
-            }
-            ::TufScreenControl::TraceStartup("redirect: exiting process");
-            ::ExitProcess(0);
+
+            ::TufScreenControl::TraceStartup("redirect: owner did not respond (taking over)");
+            return false;
         }
 
         /// 把强调色注入到应用级资源。
@@ -167,11 +180,17 @@ namespace winrt::TufScreenControl::implementation
 
             if (!keyInstance.IsCurrent())
             {
-                // 第二实例：把激活交给已有实例，交接完成后由协程退出本进程。
-                // 这里必须 return，不能继续往下创建窗口。
-                RedirectActivationAndExit(activationArgs, keyInstance);
-                ::TufScreenControl::TraceStartup("OnLaunched: redirect started, returning");
-                return;
+                // 第二实例：把激活交给已运行的实例。
+                if (TryRedirectActivation(activationArgs, keyInstance))
+                {
+                    ::TufScreenControl::TraceStartup("OnLaunched: handoff done, exiting");
+                    ::ExitProcess(0);
+                }
+
+                // 对端没响应（几乎可以肯定它已经崩溃，key 还挂在死进程上）。
+                // 这里不能退出，否则用户双击后屏幕上什么都不会出现 —— 正是
+                // 「要点两三次才打开」的成因。落下去自己开窗口，接管主实例。
+                ::TufScreenControl::TraceStartup("OnLaunched: taking over as primary");
             }
         }
         catch (...)

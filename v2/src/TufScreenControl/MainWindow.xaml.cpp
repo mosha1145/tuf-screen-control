@@ -333,6 +333,7 @@ static ::winrt::TufScreenControl::implementation::MainWindow* s_current = nullpt
     void MainWindow::HideToTray()
     {
         PrepareWindowForHide();
+        m_hiddenToTray = true;
 
         auto appWindow = AppWindow();
         if (!appWindow)
@@ -359,27 +360,54 @@ static ::winrt::TufScreenControl::implementation::MainWindow* s_current = nullpt
     }
     void MainWindow::ShowFromTray()
     {
-        if (auto appWindow = AppWindow())
+        ::TufScreenControl::TraceStartup("ShowFromTray enter");
+
+        HWND hwnd = GetHwnd();
+        const bool hidden = (hwnd == nullptr) || !::IsWindowVisible(hwnd);
+        const bool minimized = (hwnd != nullptr) && (::IsIconic(hwnd) != FALSE);
+
+        // 只在确实不可见时才 Show。窗口本来就可见（用户双击 exe 想把它提到前面）
+        // 时再去 Show 一次没有任何意义，反而多走一遍窗口状态切换。
+        if (hidden)
         {
-            appWindow.Show();
+            if (auto appWindow = AppWindow())
+            {
+                appWindow.Show();
+            }
         }
 
-        // 恢复 Mica 背衬：去掉隐藏前刷的实色底
-        if (auto root = Content().try_as<Panel>())
+        // 只有**我们确实把它藏到托盘过**，才需要拆掉隐藏前刷的实色底、重挂 Mica。
+        // 在已经挂着背衬的窗口上再设一次 SystemBackdrop(MicaBackdrop{}) 是多余额外的
+        // XAML 操作，去掉它可以避开这类重入问题。
+        if (m_hiddenToTray)
         {
-            root.Background(nullptr);
+            m_hiddenToTray = false;
+            if (auto root = Content().try_as<Panel>())
+            {
+                root.Background(nullptr);
+            }
+            SystemBackdrop(MicaBackdrop{});
+            ::TufScreenControl::TraceStartup("ShowFromTray: backdrop restored");
         }
-        SystemBackdrop(MicaBackdrop{});
 
-        Activate();
-        if (HWND hwnd = GetHwnd())
+        if (hwnd != nullptr)
         {
+            // 只有确实处于最小化时才恢复。注意不能在普通窗口上调 SW_RESTORE：
+            // 它的语义是「恢复成原始大小和位置」，会把最大化/贴边分屏打回普通尺寸。
+            if (minimized)
+            {
+                ::ShowWindow(hwnd, SW_RESTORE);
+                ::TufScreenControl::TraceStartup("ShowFromTray: restored from minimized");
+            }
+            Activate();
             ::SetForegroundWindow(hwnd);
-            // 注意：这里不要再调 ShowWindow(SW_RESTORE)。
-            // SW_RESTORE 的语义是「恢复成原始大小和位置」，会把最大化/贴边分屏
-            // 的窗口打回普通尺寸——表现为从托盘回来时窗口位置和分屏状态丢了。
-            // AppWindow.Show() + Activate() 已经足够，位置与最大/吸附状态由系统保留。
         }
+        else
+        {
+            Activate();
+        }
+
+        ::TufScreenControl::TraceStartup("ShowFromTray done");
     }
 
     void MainWindow::ShowClosePrompt()
