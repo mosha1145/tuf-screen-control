@@ -2,10 +2,13 @@
 
 // 固件更新检查（header-only）
 // ---------------------------------------------------------------------------
-// 1) WinHTTP 同步 GET ASUS 支持页接口（返回 JSON）
-// 2) 用项目自带的 MinimalJson 解析（不引入第三方依赖）
+// 1) Windows.Web.Http.HttpClient GET ASUS 支持页接口（返回 JSON）
+// 2) Windows.Data.Json 解析
 // 3) 与设备当前固件版本（USB 实例 ID 里的 REV_xxxx）比较
-// 4) 有新版时弹 ContentDialog，点「下载」用系统浏览器打开官方链接
+// 4) 有新版时弹 ContentDialog，点「下载」在应用内下载并做 SHA-256 校验
+//
+// 全部使用 WinRT 官方 API（网络 / JSON / 加密 / 流），不直接调 WinHTTP、
+// BCrypt 或自写 JSON 解析器。
 //
 // 接口返回结构（已实测）：
 //   Result.Obj[0].Files[0] = { Version:"51", FileSize:"1.27 MB",
@@ -15,6 +18,8 @@
 #include <string>
 #include <functional>
 #include <thread>
+#include <optional>
+#include <type_traits>
 #include <cctype>
 #include <atomic>
 #include <fstream>
@@ -22,25 +27,21 @@
 #include <memory>
 #include <sstream>
 #include <algorithm>
+#include <vector>
 
 #include <shlobj.h>
 #include <shellapi.h>
 
-#include <winhttp.h>
-#pragma comment(lib, "winhttp.lib")
-
-#include <bcrypt.h>
-#pragma comment(lib, "bcrypt.lib")
-
-#include <vector>
-
 #include <winrt/Windows.Foundation.h>
+#include <winrt/Windows.Data.Json.h>
+#include <winrt/Windows.Web.Http.h>
+#include <winrt/Windows.Web.Http.Headers.h>
+#include <winrt/Windows.Security.Cryptography.Core.h>
+#include <winrt/Windows.Storage.Streams.h>
 #include <winrt/Windows.System.h>
 #include <winrt/Microsoft.UI.Dispatching.h>
 #include <winrt/Microsoft.UI.Xaml.h>
 #include <winrt/Microsoft.UI.Xaml.Controls.h>
-
-#include "MinimalJson.h"
 
 namespace TufScreenControl::Ui
 {
@@ -89,106 +90,105 @@ namespace TufScreenControl::Ui
         {
             std::string body;
             DWORD status = 0;   ///< HTTP 状态码
-            DWORD error = 0;    ///< 首个失败的 Win32 错误码
+            DWORD error = 0;    ///< 失败时的 HRESULT
         };
 
-        /// 同步 HTTP GET。失败时 body 为空，error/status 说明原因。
+        /// 在临时 MTA 线程上执行 fn 并等它结束。
+        ///
+        /// 这些 WinRT 异步操作（HttpClient / DataReader / 加密）都要在套间里跑。
+        /// 调用方在 UI 线程（STA）时必须靠消息循环派发才能完成——而这里的调用点
+        /// 是同步语义（RunSelfTest 直接在 OnLaunched 里同步调），在 STA 上阻塞等
+        /// 一定死锁。统一丢到临时 MTA 线程执行，调用方保持同步，行为可预测。
+        template <typename Fn>
+        auto RunInMta(Fn&& fn)
+        {
+            using Result = std::invoke_result_t<Fn>;
+
+            std::optional<Result> result;
+            std::thread worker([&]()
+            {
+                try
+                {
+                    winrt::init_apartment(winrt::apartment_type::multi_threaded);
+                    result.emplace(fn());
+                    winrt::uninit_apartment();
+                }
+                catch (...)
+                {
+                }
+            });
+            worker.join();
+
+            return result.has_value() ? std::move(*result) : Result{};
+        }
+
+        /// 等一个 WinRT 异步操作完成，超时则取消并返回 false。
+        /// WinRT 的 HttpClient 没有 .NET 那种 Timeout 属性，超时只能靠
+        /// Completed + 等待句柄 + Cancel() 自己组合。
+        template <typename Async>
+        bool WaitWithTimeout(Async const& operation, std::chrono::milliseconds timeout)
+        {
+            winrt::handle completed{ ::CreateEventW(nullptr, FALSE, FALSE, nullptr) };
+            operation.Completed([handle = completed.get()](auto&&, auto&&)
+            {
+                ::SetEvent(handle);
+            });
+
+            if (::WaitForSingleObject(completed.get(), static_cast<DWORD>(timeout.count())) ==
+                WAIT_OBJECT_0)
+            {
+                return true;
+            }
+
+            try
+            {
+                operation.Cancel();
+            }
+            catch (...)
+            {
+            }
+            return false;
+        }
+
+        /// 同步 HTTP GET（内部用 Windows.Web.Http.HttpClient，跟随重定向、
+        /// 自动协商 TLS 与解压）。失败时 body 为空，error/status 说明原因。
         inline HttpResult HttpGetEx(std::wstring const& host, std::wstring const& path)
         {
-            HttpResult result;
-
-            HINTERNET session = ::WinHttpOpen(L"TUF Screen Control/1.0",
-                                              WINHTTP_ACCESS_TYPE_DEFAULT_PROXY,
-                                              WINHTTP_NO_PROXY_NAME,
-                                              WINHTTP_NO_PROXY_BYPASS, 0);
-            if (session == nullptr)
+            return RunInMta([&]() -> HttpResult
             {
-                result.error = ::GetLastError();
+                HttpResult result;
+                try
+                {
+                    // Windows.Foundation.Uri 要完整 URI，必须显式带 https:// 前缀
+                    // （WinHTTP 那套是 host / path 分开传的，不能直接拼过来）
+                    winrt::Windows::Foundation::Uri const uri{ L"https://" + host + path };
+
+                    using winrt::Windows::Web::Http::HttpClient;
+                    HttpClient client;
+
+                    const auto operation = client.GetAsync(uri);
+                    if (!WaitWithTimeout(operation, std::chrono::milliseconds(15000)))
+                    {
+                        result.error = ERROR_TIMEOUT;
+                        return result;
+                    }
+
+                    const auto response = operation.GetResults();
+                    result.status = static_cast<DWORD>(response.StatusCode());
+
+                    const auto body = response.Content().ReadAsStringAsync().get();
+                    result.body = winrt::to_string(body);
+                }
+                catch (winrt::hresult_error const& ex)
+                {
+                    result.error = static_cast<DWORD>(ex.code());
+                }
+                catch (...)
+                {
+                    result.error = ERROR_GEN_FAILURE;
+                }
                 return result;
-            }
-
-            // WinHTTP 默认不启用 TLS 1.2，访问 ASUS（仅 HTTPS）会直接失败。
-            DWORD protocols = WINHTTP_FLAG_SECURE_PROTOCOL_TLS1_2;
-            ::WinHttpSetOption(session, WINHTTP_OPTION_SECURE_PROTOCOLS,
-                               &protocols, sizeof(protocols));
-
-            // 关键：服务器可能 302 到区域站点，WinHTTP 默认不跟随重定向。
-            DWORD redirect = WINHTTP_OPTION_REDIRECT_POLICY_ALWAYS;
-            ::WinHttpSetOption(session, WINHTTP_OPTION_REDIRECT_POLICY,
-                               &redirect, sizeof(redirect));
-
-            // 关键：服务器可能返回 gzip，默认不自动解压 -> JSON 解析失败。
-            DWORD decompress = WINHTTP_DECOMPRESSION_FLAG_ALL;
-            ::WinHttpSetOption(session, WINHTTP_OPTION_DECOMPRESSION,
-                               &decompress, sizeof(decompress));
-
-            int timeoutMs = 15000;
-            ::WinHttpSetTimeouts(session, timeoutMs, timeoutMs, timeoutMs, timeoutMs);
-
-            if (HINTERNET connect = ::WinHttpConnect(session, host.c_str(),
-                                                     INTERNET_DEFAULT_HTTPS_PORT, 0))
-            {
-                if (HINTERNET request = ::WinHttpOpenRequest(
-                        connect, L"GET", path.c_str(), nullptr, WINHTTP_NO_REFERER,
-                        WINHTTP_DEFAULT_ACCEPT_TYPES, WINHTTP_FLAG_SECURE))
-                {
-                    const BOOL sent = ::WinHttpSendRequest(request,
-                                                           WINHTTP_NO_ADDITIONAL_HEADERS, 0,
-                                                           WINHTTP_NO_REQUEST_DATA, 0, 0, 0);
-                    if (!sent)
-                    {
-                        result.error = ::GetLastError();
-                    }
-                    else if (!::WinHttpReceiveResponse(request, nullptr))
-                    {
-                        result.error = ::GetLastError();
-                    }
-                    else
-                    {
-                        DWORD statusCode = 0;
-                        DWORD statusSize = sizeof(statusCode);
-                        ::WinHttpQueryHeaders(request, WINHTTP_QUERY_STATUS_CODE | WINHTTP_QUERY_FLAG_NUMBER,
-                                              WINHTTP_HEADER_NAME_BY_INDEX, &statusCode,
-                                              &statusSize, WINHTTP_NO_HEADER_INDEX);
-                        result.status = statusCode;
-
-                        for (;;)
-                        {
-                            DWORD available = 0;
-                            if (!::WinHttpQueryDataAvailable(request, &available))
-                            {
-                                result.error = ::GetLastError();
-                                break;
-                            }
-                            if (available == 0)
-                            {
-                                break;
-                            }
-                            std::string chunk(available, '\0');
-                            DWORD read = 0;
-                            if (!::WinHttpReadData(request, chunk.data(), available, &read))
-                            {
-                                result.error = ::GetLastError();
-                                break;
-                            }
-                            result.body.append(chunk.data(), read);
-                        }
-                    }
-                    ::WinHttpCloseHandle(request);
-                }
-                else
-                {
-                    result.error = ::GetLastError();
-                }
-                ::WinHttpCloseHandle(connect);
-            }
-            else
-            {
-                result.error = ::GetLastError();
-            }
-
-            ::WinHttpCloseHandle(session);
-            return result;
+            });
         }
 
         /// 同步 HTTP GET，返回原始响应体（UTF-8）。失败返回空串。
@@ -248,6 +248,9 @@ namespace TufScreenControl::Ui
         /// 拉取官方最新固件信息。网络失败或解析失败时返回 found == false。
         inline FirmwareRelease FetchLatest()
         {
+            using winrt::Windows::Data::Json::JsonObject;
+            using winrt::Windows::Data::Json::JsonValueType;
+
             FirmwareRelease release;
 
             const std::string raw = HttpGet(kApiHost, kApiPath);
@@ -256,52 +259,81 @@ namespace TufScreenControl::Ui
                 return release;
             }
 
-            const auto root = ::TufScreenControl::Core::Json::Parse(raw);
-            const auto& objects = root[L"Result"][L"Obj"];
-            if (!objects.IsArray() || objects.items.empty())
-            {
-                return release;
-            }
-
-            const auto& files = objects.items.front()[L"Files"];
-            if (!files.IsArray() || files.items.empty())
-            {
-                return release;
-            }
-
-            const auto& file = files.items.front();
-
-            // 注意：接口把 Version 返回成【字符串】（"51"），不是数字。
-            // Value::AsInt 只对数字类型生效，直接用它会被解析成 0。
-            const auto& versionValue = file[L"Version"];
-            int version = 0;
-            if (versionValue.IsNumber())
-            {
-                version = static_cast<int>(versionValue.number);
-            }
-            else if (versionValue.IsString())
+            // 从 JsonObject 里安全取字符串：键不存在或类型不对都退回默认值。
+            const auto text = [](JsonObject const& object, wchar_t const* key,
+                                 std::wstring const& fallback) -> std::wstring
             {
                 try
                 {
-                    version = std::stoi(versionValue.text);
+                    if (object.HasKey(key))
+                    {
+                        return std::wstring(object.GetNamedString(key).c_str());
+                    }
                 }
                 catch (...)
                 {
-                    version = 0;
                 }
+                return fallback;
+            };
+
+            try
+            {
+                const auto root = JsonObject::Parse(winrt::to_hstring(raw));
+
+                const auto objects = root.GetNamedObject(L"Result").GetNamedArray(L"Obj");
+                if (objects.Size() == 0)
+                {
+                    return release;
+                }
+
+                const auto files = objects.GetObjectAt(0).GetNamedArray(L"Files");
+                if (files.Size() == 0)
+                {
+                    return release;
+                }
+
+                const auto file = files.GetObjectAt(0);
+
+                // 注意：接口把 Version 返回成【字符串】（"51"）。但历史上也出现过
+                // 数字类型，两种都兼容，避免整段解析因为类型变化而失效。
+                int version = 0;
+                switch (file.GetNamedValue(L"Version").ValueType())
+                {
+                case JsonValueType::Number:
+                    version = static_cast<int>(file.GetNamedNumber(L"Version", 0));
+                    break;
+                case JsonValueType::String:
+                    try
+                    {
+                        version = std::stoi(std::wstring(file.GetNamedString(L"Version").c_str()));
+                    }
+                    catch (...)
+                    {
+                        version = 0;
+                    }
+                    break;
+                default:
+                    break;
+                }
+
+                release.version = version;
+                release.fileSize = text(file, L"FileSize", L"未知");
+                release.title = text(file, L"Title", L"");
+                release.sha256 = text(file, L"sha256", L"");
+
+                release.downloadUrl = text(file.GetNamedObject(L"DownloadUrl"), L"China", L"");
+                if (release.downloadUrl.empty())
+                {
+                    // 国内渠道拿不到时退回全球渠道
+                    release.downloadUrl = text(file.GetNamedObject(L"DownloadUrl"), L"Global", L"");
+                }
+                release.found = release.version > 0;
+            }
+            catch (...)
+            {
+                return FirmwareRelease{};
             }
 
-            release.version = version;
-            release.fileSize = file[L"FileSize"].AsString(L"未知");
-            release.title = file[L"Title"].AsString(L"");
-            release.sha256 = file[L"sha256"].AsString(L"");
-            release.downloadUrl = file[L"DownloadUrl"][L"China"].AsString(L"");
-            if (release.downloadUrl.empty())
-            {
-                // 国内渠道拿不到时退回全球渠道
-                release.downloadUrl = file[L"DownloadUrl"][L"Global"].AsString(L"");
-            }
-            release.found = release.version > 0;
             return release;
         }
 
@@ -314,26 +346,6 @@ namespace TufScreenControl::Ui
         // ------------------------------------------------------------------
         namespace Download
         {
-            /// 从 https URL 拆出 host 与 path。
-            inline bool SplitUrl(std::wstring const& url, std::wstring& host, std::wstring& path)
-            {
-                const std::wstring prefix = L"https://";
-                if (url.rfind(prefix, 0) != 0)
-                {
-                    return false;
-                }
-                const std::size_t slash = url.find(L'/', prefix.size());
-                if (slash == std::wstring::npos)
-                {
-                    host = url.substr(prefix.size());
-                    path = L"/";
-                    return true;
-                }
-                host = url.substr(prefix.size(), slash - prefix.size());
-                path = url.substr(slash);
-                return true;
-            }
-
             /// 从 URL 末段取文件名。
             inline std::wstring FileNameOf(std::wstring const& url)
             {
@@ -348,182 +360,147 @@ namespace TufScreenControl::Ui
             }
 
             /// 计算文件 SHA-256（大写十六进制）。失败返回空串。
+            /// 用 Windows.Security.Cryptography.Core 的官方实现（原来的 BCrypt 直调已移除）。
             inline std::wstring FileSha256(std::filesystem::path const& path)
             {
-                BCRYPT_ALG_HANDLE alg = nullptr;
-                if (!BCRYPT_SUCCESS(::BCryptOpenAlgorithmProvider(
-                        &alg, BCRYPT_SHA256_ALGORITHM, nullptr, 0)))
+                std::ifstream in(path, std::ios::binary);
+                if (!in)
                 {
                     return {};
                 }
 
-                DWORD objectSize = 0;
-                DWORD written = 0;
-                if (!BCRYPT_SUCCESS(::BCryptGetProperty(alg, BCRYPT_OBJECT_LENGTH,
-                                                        reinterpret_cast<PUCHAR>(&objectSize),
-                                                        sizeof(objectSize), &written, 0)))
+                return RunInMta([&]() -> std::wstring
                 {
-                    ::BCryptCloseAlgorithmProvider(alg, 0);
-                    return {};
-                }
+                    using winrt::Windows::Security::Cryptography::CryptographicBuffer;
+                    using winrt::Windows::Security::Cryptography::Core::HashAlgorithmNames;
+                    using winrt::Windows::Security::Cryptography::Core::HashAlgorithmProvider;
 
-                std::vector<UCHAR> object(objectSize);
-
-                BCRYPT_HASH_HANDLE hash = nullptr;
-                if (!BCRYPT_SUCCESS(::BCryptCreateHash(alg, &hash, object.data(), objectSize,
-                                                       nullptr, 0, 0)))
-                {
-                    ::BCryptCloseAlgorithmProvider(alg, 0);
-                    return {};
-                }
-
-                std::wstring result;
-                {
-                    std::ifstream in(path, std::ios::binary);
-                    if (in)
+                    try
                     {
-                        std::vector<char> buffer(64 * 1024);
+                        const auto provider =
+                            HashAlgorithmProvider::OpenAlgorithm(HashAlgorithmNames::Sha256());
+                        auto hash = provider.CreateHash();
+
+                        std::vector<std::uint8_t> buffer(64 * 1024);
                         while (in)
                         {
-                            in.read(buffer.data(), static_cast<std::streamsize>(buffer.size()));
+                            in.read(reinterpret_cast<char*>(buffer.data()),
+                                    static_cast<std::streamsize>(buffer.size()));
                             const auto got = in.gcount();
                             if (got <= 0)
                             {
                                 break;
                             }
-                            ::BCryptHashData(hash, reinterpret_cast<PUCHAR>(buffer.data()),
-                                             static_cast<ULONG>(got), 0);
+                            hash.Append(CryptographicBuffer::CreateFromByteArray(
+                                winrt::array_view<std::uint8_t const>(
+                                    buffer.data(), buffer.data() + got)));
                         }
 
-                        UCHAR digest[32]{};
-                        if (BCRYPT_SUCCESS(::BCryptFinishHash(hash, digest, sizeof(digest), 0)))
+                        const auto digest = hash.GetValueAndReset();
+                        const std::wstring hex =
+                            CryptographicBuffer::EncodeToHexString(digest).c_str();
+
+                        // 接口给的是大写十六进制，统一转大写便于直接比较
+                        std::wstring upper = hex;
+                        for (wchar_t& ch : upper)
                         {
-                            wchar_t hex[3]{};
-                            for (UCHAR byte : digest)
-                            {
-                                swprintf_s(hex, L"%02X", byte);
-                                result += hex;
-                            }
+                            ch = static_cast<wchar_t>(towupper(ch));
                         }
+                        return upper;
                     }
-                }
-
-                ::BCryptDestroyHash(hash);
-                ::BCryptCloseAlgorithmProvider(alg, 0);
-                return result;
+                    catch (...)
+                    {
+                        return std::wstring{};
+                    }
+                });
             }
 
             /// 同步下载。progress(已收字节, 总字节)，总字节未知时为 0。
+            /// 用 HttpClient + DataReader 流式读取，不把整个文件读进内存。
             inline bool DownloadTo(std::wstring const& url,
                                    std::filesystem::path const& target,
                                    std::function<void(unsigned long long, unsigned long long)> const& progress)
             {
-                std::wstring host;
-                std::wstring path;
-                if (!SplitUrl(url, host, path))
-                {
-                    return false;
-                }
-
                 std::error_code ec;
                 std::filesystem::create_directories(target.parent_path(), ec);
 
-                std::ofstream out(target, std::ios::binary | std::ios::trunc);
-                if (!out)
+                return RunInMta([&]() -> bool
                 {
-                    return false;
-                }
+                    using winrt::Windows::Web::Http::HttpClient;
+                    using winrt::Windows::Web::Http::HttpCompletionOption;
+                    using winrt::Windows::Web::Http::HttpStatusCode;
+                    using winrt::Windows::Storage::Streams::DataReader;
 
-                HINTERNET session = ::WinHttpOpen(L"TUF Screen Control/1.0",
-                                                  WINHTTP_ACCESS_TYPE_DEFAULT_PROXY,
-                                                  WINHTTP_NO_PROXY_NAME,
-                                                  WINHTTP_NO_PROXY_BYPASS, 0);
-                if (session == nullptr)
-                {
-                    return false;
-                }
-                DWORD protocols = WINHTTP_FLAG_SECURE_PROTOCOL_TLS1_2;
-                ::WinHttpSetOption(session, WINHTTP_OPTION_SECURE_PROTOCOLS, &protocols, sizeof(protocols));
-
-                bool ok = false;
-                if (HINTERNET connect = ::WinHttpConnect(session, host.c_str(),
-                                                         INTERNET_DEFAULT_HTTPS_PORT, 0))
-                {
-                    if (HINTERNET request = ::WinHttpOpenRequest(
-                            connect, L"GET", path.c_str(), nullptr, WINHTTP_NO_REFERER,
-                            WINHTTP_DEFAULT_ACCEPT_TYPES, WINHTTP_FLAG_SECURE))
+                    const auto removeTarget = [&]()
                     {
-                        const BOOL sent = ::WinHttpSendRequest(request,
-                                                               WINHTTP_NO_ADDITIONAL_HEADERS, 0,
-                                                               WINHTTP_NO_REQUEST_DATA, 0, 0, 0);
-                        if (sent && ::WinHttpReceiveResponse(request, nullptr))
+                        std::error_code removeEc;
+                        std::filesystem::remove(target, removeEc);
+                    };
+
+                    try
+                    {
+                        winrt::Windows::Foundation::Uri const uri{ EncodeUrl(url) };
+
+                        HttpClient client;
+                        // 只要响应头就开始读，避免把大文件整体缓冲到内存
+                        const auto response = client.GetAsync(uri, HttpCompletionOption::ResponseHeadersRead).get();
+                        if (response.StatusCode() != HttpStatusCode::Ok)
                         {
-                            // 先问内容长度，用于进度条
-                            unsigned long long total = 0;
-                            wchar_t lengthText[64]{};
-                            DWORD lengthSize = sizeof(lengthText);
-                            if (::WinHttpQueryHeaders(request,
-                                                      WINHTTP_QUERY_CONTENT_LENGTH,
-                                                      WINHTTP_HEADER_NAME_BY_INDEX,
-                                                      lengthText, &lengthSize,
-                                                      WINHTTP_NO_HEADER_INDEX))
+                            return false;
+                        }
+
+                        const auto content = response.Content();
+                        unsigned long long total = 0;
+                        if (const auto length = content.Headers().ContentLength(); length)
+                        {
+                            total = length.Value();
+                        }
+
+                        std::ofstream out(target, std::ios::binary | std::ios::trunc);
+                        if (!out)
+                        {
+                            return false;
+                        }
+
+                        const auto stream = content.ReadAsInputStreamAsync().get();
+                        DataReader reader(stream);
+
+                        unsigned long long received = 0;
+                        for (;;)
+                        {
+                            const std::uint32_t loaded = reader.LoadAsync(64 * 1024).get();
+                            if (loaded == 0)
                             {
-                                total = _wcstoui64(lengthText, nullptr, 10);
+                                break;
                             }
 
-                            unsigned long long received = 0;
-                            ok = true;
-                            for (;;)
+                            std::vector<std::uint8_t> chunk(loaded);
+                            reader.ReadBytes(chunk);
+                            out.write(reinterpret_cast<char const*>(chunk.data()),
+                                      static_cast<std::streamsize>(loaded));
+
+                            received += loaded;
+                            if (progress)
                             {
-                                DWORD available = 0;
-                                if (!::WinHttpQueryDataAvailable(request, &available))
-                                {
-                                    ok = false;
-                                    break;
-                                }
-                                if (available == 0)
-                                {
-                                    break;
-                                }
-
-                                std::string chunk(available, '\0');
-                                DWORD read = 0;
-                                if (!::WinHttpReadData(request, chunk.data(), available, &read))
-                                {
-                                    ok = false;
-                                    break;
-                                }
-                                if (read == 0)
-                                {
-                                    break;
-                                }
-
-                                out.write(chunk.data(), static_cast<std::streamsize>(read));
-                                received += read;
-                                if (progress)
-                                {
-                                    progress(received, total);
-                                }
-                            }
-
-                            out.flush();
-                            if (received == 0)
-                            {
-                                ok = false;
+                                progress(received, total);
                             }
                         }
-                        ::WinHttpCloseHandle(request);
-                    }
-                    ::WinHttpCloseHandle(connect);
-                }
-                ::WinHttpCloseHandle(session);
 
-                if (!ok)
-                {
-                    out.close();
-                    std::filesystem::remove(target, ec);
-                }
-                return ok;
+                        out.flush();
+                        if (received == 0)
+                        {
+                            out.close();
+                            removeTarget();
+                            return false;
+                        }
+                        return true;
+                    }
+                    catch (...)
+                    {
+                        removeTarget();
+                        return false;
+                    }
+                });
             }
 
             /// 下载对话框：进度条 + 取消。完成后询问是否打开文件夹。

@@ -20,6 +20,7 @@
 #include <filesystem>
 #include <vector>
 
+#include <winrt/Windows.UI.Xaml.Interop.h>
 #include <winrt/Windows.Storage.Streams.h>
 #include <winrt/Microsoft.UI.Xaml.Media.Imaging.h>
 #include <winrt/Windows.Graphics.Imaging.h>
@@ -105,18 +106,11 @@ static ::winrt::TufScreenControl::implementation::MainWindow* s_current = nullpt
         m_currentTag = tag;
 
         // 导航切换动画：官方 EntranceNavigationTransitionInfo（淡入 + 从底部上浮）
-        // 用 winrt::name_of 显式构造 TypeName：不依赖 xaml_typename 辅助函数
-        // （在新版 C++/WinRT 里它的声明位置有变化，直接构造更稳）。
-        winrt::Windows::UI::Xaml::Interop::TypeName pageType{};
-        if (tag == L"settings")
-        {
-            pageType.Name = winrt::name_of<TufScreenControl::SettingsPage>();
-        }
-        else
-        {
-            pageType.Name = winrt::name_of<TufScreenControl::DisplayPage>();
-        }
-        pageType.Kind = winrt::Windows::UI::Xaml::Interop::TypeKind::Metadata;
+        // 页面类型用官方的 winrt::xaml_typename<T>()（定义在 Windows.UI.Xaml.Interop.h），
+        // 由 C++/WinRT 生成完整的 TypeName，不再手搓 Name + TypeKind。
+        winrt::Windows::UI::Xaml::Interop::TypeName pageType =
+            tag == L"settings" ? winrt::xaml_typename<TufScreenControl::SettingsPage>()
+                               : winrt::xaml_typename<TufScreenControl::DisplayPage>();
 
         Microsoft::UI::Xaml::Media::Animation::EntranceNavigationTransitionInfo entrance;
         ContentFrame().Navigate(pageType, nullptr, entrance);
