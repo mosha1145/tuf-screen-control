@@ -38,7 +38,7 @@
                     Height="332"
                     CornerRadius="8"
                     BorderThickness="1"
-                    BorderBrush="{StaticResource CardStrokeColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                     Background="Black"
                     Translation="0,0,16">
                     <Border.Shadow>
@@ -62,7 +62,7 @@
                             Text="未在显示"
                             HorizontalAlignment="Center"
                             VerticalAlignment="Center"
-                            Foreground="{StaticResource TextFillColorTertiaryBrush}" />
+                            Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
 
                         <!-- 设备连接状态徽标：叠在预览框左上角 -->
                         <Border
@@ -87,8 +87,8 @@
                     CornerRadius="4"
                     Padding="16"
                     BorderThickness="1"
-                    BorderBrush="{StaticResource CardStrokeColorDefaultBrush}"
-                    Background="{StaticResource CardBackgroundFillColorDefaultBrush}">
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
                     <StackPanel Spacing="14">
 
                         <ToggleSwitch x:Name="ScreenSwitch" x:Uid="ScreenSwitch" Header="屏幕开关" />
@@ -124,8 +124,8 @@
                 CornerRadius="4"
                 Padding="16"
                 BorderThickness="1"
-                BorderBrush="{StaticResource CardStrokeColorDefaultBrush}"
-                Background="{StaticResource CardBackgroundFillColorDefaultBrush}">
+                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
                 <StackPanel Spacing="10">
 
                     <TextBlock

@@ -238,7 +238,10 @@ namespace winrt::TufScreenControl::implementation
                             bar.IsOpen(true);
                             if (xamlRoot)
                             {
-                                ::TufScreenControl::Ui::Firmware::ShowDialog(xamlRoot, release);
+                                ::TufScreenControl::Ui::Firmware::ShowDialog(
+                                    xamlRoot, release,
+                                    ::TufScreenControl::Ui::ToElementTheme(
+                                        MainWindow::Current()->CurrentTheme()));
                             }
                         }
                         else

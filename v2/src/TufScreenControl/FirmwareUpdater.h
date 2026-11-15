@@ -504,9 +504,11 @@ namespace TufScreenControl::Ui
             }
 
             /// 下载对话框：进度条 + 取消。完成后询问是否打开文件夹。
+            /// theme 由调用方给出：弹出层不继承父元素主题，必须自己设。
             inline void ShowDownloadDialog(winrt::Microsoft::UI::Xaml::XamlRoot const& root,
                                            winrt::Microsoft::UI::Dispatching::DispatcherQueue const& queue,
-                                           FirmwareRelease const& release)
+                                           FirmwareRelease const& release,
+                                           winrt::Microsoft::UI::Xaml::ElementTheme theme)
             {
                 using namespace winrt::Microsoft::UI::Xaml::Controls;
 
@@ -544,6 +546,7 @@ namespace TufScreenControl::Ui
 
                 ContentDialog dialog;
                 dialog.XamlRoot(root);
+                dialog.RequestedTheme(theme);   // 弹出层不继承父元素主题
                 dialog.Title(winrt::box_value(L"固件更新"));
                 dialog.Content(panel);
                 dialog.CloseButtonText(L"取消");
@@ -556,7 +559,7 @@ namespace TufScreenControl::Ui
 
                 dialog.ShowAsync();
 
-                std::thread([bar, label, queue, dialog, root, url, target, targetDir, cancel,
+                std::thread([bar, label, queue, dialog, root, url, target, targetDir, cancel, theme,
                              sha256 = release.sha256]() mutable
                 {
                     bool ok = false;
@@ -621,7 +624,7 @@ namespace TufScreenControl::Ui
                         break;
                     }
 
-                    queue.TryEnqueue([dialog, root, ok, target, targetDir, cancel]()
+                    queue.TryEnqueue([dialog, root, ok, target, targetDir, cancel, theme]()
                     {
                         if (cancel->load())
                         {
@@ -631,6 +634,7 @@ namespace TufScreenControl::Ui
 
                         ContentDialog done;
                         done.XamlRoot(root);
+                        done.RequestedTheme(theme);
                         done.Title(winrt::box_value(L"固件更新"));
                         if (ok)
                         {
@@ -659,8 +663,10 @@ namespace TufScreenControl::Ui
             }
         }
 
+        /// theme 由调用方给出：弹出层不继承父元素主题，必须自己设。
         inline void ShowDialog(winrt::Microsoft::UI::Xaml::XamlRoot const& root,
-                               FirmwareRelease const& release)
+                               FirmwareRelease const& release,
+                               winrt::Microsoft::UI::Xaml::ElementTheme theme)
         {
             using namespace winrt::Microsoft::UI::Xaml::Controls;
 
@@ -672,6 +678,7 @@ namespace TufScreenControl::Ui
 
             ContentDialog dialog;
             dialog.XamlRoot(root);
+            dialog.RequestedTheme(theme);
             dialog.Title(winrt::box_value(L"固件更新"));
             dialog.Content(winrt::box_value(winrt::hstring(message)));
             dialog.PrimaryButtonText(L"下载");
@@ -679,15 +686,27 @@ namespace TufScreenControl::Ui
             dialog.DefaultButton(ContentDialogButton::Primary);
 
             auto queue = winrt::Microsoft::UI::Dispatching::DispatcherQueue::GetForCurrentThread();
-            dialog.ShowAsync().Completed(
-                [root, queue, release](auto const& operation, auto const&)
+            winrt::Windows::Foundation::IAsyncOperation<ContentDialogResult> operation{ nullptr };
+            try
+            {
+                operation = dialog.ShowAsync();
+            }
+            catch (...)
+            {
+                // 同一 XamlRoot 上已有对话框时 ShowAsync 会抛异常；不接住会直接
+                // 结束进程。这里放弃本次提示即可，不影响主功能。
+                return;
+            }
+
+            operation.Completed(
+                [root, queue, release, theme](auto const& operation, auto const&)
                 {
                     if (operation.GetResults() != ContentDialogResult::Primary)
                     {
                         return;
                     }
                     // 在应用内下载（无需跳转浏览器）
-                    Download::ShowDownloadDialog(root, queue, release);
+                    Download::ShowDownloadDialog(root, queue, release, theme);
                 });
         }
     }

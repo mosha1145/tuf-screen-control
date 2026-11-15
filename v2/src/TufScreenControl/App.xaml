@@ -25,8 +25,8 @@
                 <Setter Property="CornerRadius" Value="4" />
                 <Setter Property="Padding" Value="16" />
                 <Setter Property="BorderThickness" Value="1" />
-                <Setter Property="BorderBrush" Value="{StaticResource CardStrokeColorDefaultBrush}" />
-                <Setter Property="Background" Value="{StaticResource CardBackgroundFillColorDefaultBrush}" />
+                <Setter Property="BorderBrush" Value="{ThemeResource CardStrokeColorDefaultBrush}" />
+                <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorDefaultBrush}" />
             </Style>
 
             <!-- 单行卡片：上下不留内边距，最小高度 64（与折叠卡标题行同高） -->
@@ -35,8 +35,8 @@
                 <Setter Property="Padding" Value="16,0,16,0" />
                 <Setter Property="MinHeight" Value="64" />
                 <Setter Property="BorderThickness" Value="1" />
-                <Setter Property="BorderBrush" Value="{StaticResource CardStrokeColorDefaultBrush}" />
-                <Setter Property="Background" Value="{StaticResource CardBackgroundFillColorDefaultBrush}" />
+                <Setter Property="BorderBrush" Value="{ThemeResource CardStrokeColorDefaultBrush}" />
+                <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorDefaultBrush}" />
             </Style>
 
             <!-- 折叠卡（Expander）：纵向内边距收掉，保证与单行卡片等高 -->

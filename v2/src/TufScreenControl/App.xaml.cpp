@@ -91,39 +91,30 @@ namespace winrt::TufScreenControl::implementation
             return mutex;         // 本进程是唯一实例
         }
 
-        /// 尽力把已运行实例的窗口叫到前面（AppLifecycle 重定向，失败不影响退出）。
+        /// 把已有实例的窗口叫到前面，交接完成后退出本进程。
         ///
-        /// 只在确认「已有存活实例」时才调用。用有界等待：完成通知万一没回来
-        /// （对端忙/正在退出），1.5 秒后照样退出——单实例已由互斥量保证，
-        /// 这里只是「把窗口提到前台」这个附加动作，不能因此拖慢或挂住启动。
-        void TryRaiseExistingInstance()
+        /// 只在互斥量确认「已有存活实例」时才调用，所以对端一定在跑，
+        /// co_await 正常几十毫秒就完成——不需要任何超时兜底：
+        ///  - 同步等（WaitForSingleObject）会卡死：本线程是 STA，完成回调要靠 COM
+        ///    封送回该套间，而同步等待不派发 COM 调用，回调永远排不上队。
+        ///  - co_await 把续体挂到当前套间的 DispatcherQueue 上，OnLaunched 返回后
+        ///    消息循环已经在跑，完成即退出。
+        /// 注意这里**不是**单实例判定的依据（互斥量才是），只是「顺便把窗口置前」，
+        /// 所以即便这次交接没送达，也不会多开、也不会残留状态。
+        winrt::fire_and_forget RaiseExistingInstanceAndExit(AppActivationArguments args,
+                                                            AppInstance target)
         {
             try
             {
-                auto const args = AppInstance::GetCurrent().GetActivatedEventArgs();
-                auto const target = AppInstance::FindOrRegisterForKey(
-                    ::TufScreenControl::kInstanceKey);
-                if (target.IsCurrent())
-                {
-                    return;   // 实际没有别的实例在跑，无事可做
-                }
-
-                winrt::handle ready{ ::CreateEventW(nullptr, FALSE, FALSE, nullptr) };
-                target.RedirectActivationToAsync(args).Completed(
-                    [handle = ready.get()](auto&&, auto&&)
-                    {
-                        ::SetEvent(handle);
-                    });
-
-                HANDLE handles[1]{ ready.get() };
-                DWORD index = 0;
-                ::CoWaitForMultipleHandles(
-                    COWAIT_DISPATCH_CALLS | COWAIT_DISPATCH_WINDOW_MESSAGES,
-                    1500, 1, handles, &index);
+                co_await target.RedirectActivationToAsync(args);
+                ::TufScreenControl::TraceStartup("raise: co_await completed");
             }
             catch (...)
             {
+                ::TufScreenControl::TraceStartup("raise: co_await threw");
             }
+            ::TufScreenControl::TraceStartup("raise: exiting process");
+            ::ExitProcess(0);
         }
 
         /// 把强调色注入到应用级资源。
@@ -192,7 +183,15 @@ namespace winrt::TufScreenControl::implementation
         if (instanceMutex == nullptr)
         {
             ::TufScreenControl::TraceStartup("OnLaunched: another instance alive, raising it");
-            TryRaiseExistingInstance();
+            try
+            {
+                RaiseExistingInstanceAndExit(AppInstance::GetCurrent().GetActivatedEventArgs(),
+                                             AppInstance::FindOrRegisterForKey(
+                                                 ::TufScreenControl::kInstanceKey));
+            }
+            catch (...)
+            {
+            }
             ::TufScreenControl::TraceStartup("OnLaunched: exiting (second instance)");
             ::ExitProcess(0);
         }

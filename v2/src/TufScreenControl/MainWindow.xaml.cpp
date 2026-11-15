@@ -191,7 +191,9 @@ static ::winrt::TufScreenControl::implementation::MainWindow* s_current = nullpt
             if (root)
             {
                 auto queue = DispatcherQueue();
-                std::thread([root, queue]()
+                // 主题在 UI 线程上取好：对话框是弹出层，不继承父元素主题，得显式传进去
+                const auto dialogTheme = ::TufScreenControl::Ui::ToElementTheme(m_theme);
+                std::thread([root, queue, dialogTheme]()
                 {
                     auto release = ::TufScreenControl::Ui::Firmware::FetchLatest();
                     if (!release.found)
@@ -214,9 +216,9 @@ static ::winrt::TufScreenControl::implementation::MainWindow* s_current = nullpt
                         return;
                     }
 
-                    queue.TryEnqueue([root, release]()
+                    queue.TryEnqueue([root, release, dialogTheme]()
                     {
-                        ::TufScreenControl::Ui::Firmware::ShowDialog(root, release);
+                        ::TufScreenControl::Ui::Firmware::ShowDialog(root, release, dialogTheme);
                     });
                 }).detach();
             }
@@ -273,6 +275,7 @@ static ::winrt::TufScreenControl::implementation::MainWindow* s_current = nullpt
             {
                 if (m_exiting)
                 {
+                    ::TufScreenControl::TraceStartup("Closing: m_exiting, allow");
                     return;   // 真退出：放行，交给 Closed 处理
                 }
 
@@ -282,6 +285,10 @@ static ::winrt::TufScreenControl::implementation::MainWindow* s_current = nullpt
                 {
                     action = L"ask";   // 首次关闭一律询问
                 }
+                ::TufScreenControl::TraceStartup(
+                    action == L"tray" ? "Closing: branch=tray"
+                    : action == L"exit" ? "Closing: branch=exit"
+                                        : "Closing: branch=ask");
 
                 if (action == L"tray")
                 {
@@ -309,7 +316,14 @@ static ::winrt::TufScreenControl::implementation::MainWindow* s_current = nullpt
                 else
                 {
                     args.Cancel(true);
-                    ShowClosePrompt();
+                    // 不能在 Closing 回调里同步弹 ContentDialog：此刻窗口正处于
+                    // 关闭流程中，创建/显示弹出层会直接把进程带走（实测退出码 0、
+                    // 无崩溃记录、对话框也不出现）。先取消关闭，再把弹窗投递到
+                    // 消息循环，等这轮关闭流程走完再显示。
+                    if (auto queue = DispatcherQueue())
+                    {
+                        queue.TryEnqueue([this]() { ShowClosePrompt(); });
+                    }
                 }
             });
         }
@@ -432,6 +446,8 @@ static ::winrt::TufScreenControl::implementation::MainWindow* s_current = nullpt
 
         ContentDialog dialog;
         dialog.XamlRoot(root.XamlRoot());
+        // 弹出层不继承父元素的 RequestedTheme，必须显式设，否则「应用深色/系统浅色」时会弹浅色
+        dialog.RequestedTheme(::TufScreenControl::Ui::ToElementTheme(m_theme));
         dialog.Title(box_value(L"关闭窗口时"));
         dialog.Content(box_value(L"关闭主窗口后，程序可以继续在系统托盘运行，水冷屏显示不会中断。"));
         dialog.PrimaryButtonText(L"隐藏到系统托盘");
@@ -439,7 +455,21 @@ static ::winrt::TufScreenControl::implementation::MainWindow* s_current = nullpt
         dialog.CloseButtonText(L"取消");
         dialog.DefaultButton(ContentDialogButton::Primary);
 
-        auto operation = dialog.ShowAsync();
+        winrt::Windows::Foundation::IAsyncOperation<ContentDialogResult> operation{ nullptr };
+        try
+        {
+            operation = dialog.ShowAsync();
+        }
+        catch (...)
+        {
+            // 同一 XamlRoot 上已经有一个 ContentDialog 时，ShowAsync 会抛
+            // hresult_error（"Only a single ContentDialog can be opened at any time"）。
+            // 不接住的话异常会从 Closing 的回调里逃出去，直接把进程带走。
+            // 此时按「用户这次先不被打扰」处理：不退出、隐藏到托盘。
+            m_closePromptOpen = false;
+            HideToTray();
+            return;
+        }
         operation.Completed([this, dialog](auto const& op, Windows::Foundation::AsyncStatus status)
         {
             m_closePromptOpen = false;
