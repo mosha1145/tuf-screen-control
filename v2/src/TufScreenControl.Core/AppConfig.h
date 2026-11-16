@@ -36,15 +36,8 @@ namespace TufScreenControl::Core
         std::wstring fitMode = L"contain";   ///< contain / cover / stretch
         int rotation = 0;                    ///< 0 / 90 / 180 / 270
 
-        // ---- 显示内容（内部状态） ----
-        std::wstring displayType;            ///< photo / video / screen / smtc / 空
-        std::wstring photoPath;              ///< 迁移后为绝对路径
-        std::wstring videoPath;              ///< 迁移后为绝对路径
-        std::wstring playbackMode = L"single";   ///< single / list
-
         // ---- 播放 ----
         double photoFps = 10.0;              ///< 0.1 - 30
-        std::wstring videoQuality = L"medium";   ///< low / medium / high
 
         // ---- 启动 ----
         bool autoStart = false;
@@ -59,13 +52,6 @@ namespace TufScreenControl::Core
         std::wstring appTheme = L"system";   ///< system / light / dark
         std::wstring themeColor = L"system"; ///< system / tuf（TUF GAMING 橙色 #FF9E1B）
 
-        // ---- 电源联动（本期暂缓，键保留以兼容 v1 配置） ----
-        bool powerActions = true;
-        bool powerCloseApp = true;
-        bool powerShutdown = false;
-        bool powerLogout = false;
-        bool powerSleep = false;
-
         /// 睡眠模式：开启后无内容播放时关闭屏幕（命令 0x8000011F = 0）。
         bool sleepMode = true;
 
@@ -75,14 +61,6 @@ namespace TufScreenControl::Core
         std::wstring updateFrequency = L"startup";
         /// 上次检查时间（Unix 秒，0 表示从未检查）。
         long long lastUpdateCheckUnix = 0;
-
-        // ---- 覆盖层 ----
-        std::wstring overlayType = L"none";  ///< none / clock / custom（旧值 hwinfo 归一为 none）
-        std::wstring clockStyle = L"text";   ///< text / analog
-
-        // ---- 采集（本期暂缓，键保留） ----
-        std::wstring smtcFilterMode = L"all";
-        std::vector<std::wstring> smtcFilterApps;
 
         /// 配置结构版本，用于将来做版本化升级。
         int schemaVersion = 2;
@@ -125,10 +103,6 @@ namespace TufScreenControl::Core
 
         /// 素材库根目录（v2 仍指向仓库内的 assets\，素材是用户数据不搬走）。
         std::filesystem::path AssetRoot() const;
-
-        /// 把配置里的相对素材路径重定位为绝对路径（迁移时使用）。
-        static std::wstring ResolveMediaPath(std::wstring const& stored,
-                                             std::filesystem::path const& legacyRoot);
 
     private:
         bool MigrateFromLegacy(std::filesystem::path const& legacyPath);

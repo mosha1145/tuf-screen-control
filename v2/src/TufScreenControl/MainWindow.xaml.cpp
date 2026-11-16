@@ -576,7 +576,7 @@ static ::winrt::TufScreenControl::implementation::MainWindow* s_current = nullpt
             return;
         }
 
-        ::TufScreenControl::PowerMonitor::Handlers handlers;
+        ::TufScreenControl::DeviceWatcher::Handlers handlers;
 
         // 设备插拔：重新枚举设备（无需重启软件），并刷新界面上的连接状态
         handlers.deviceChanged = [this]()
@@ -588,7 +588,7 @@ static ::winrt::TufScreenControl::implementation::MainWindow* s_current = nullpt
             RefreshDeviceBadge();
         };
 
-        m_powerMonitor.Start(hwnd, handlers);
+        m_deviceWatcher.Start(hwnd, handlers);
 
         // 单实例：第二实例的激活被系统重定向到本进程时，把窗口叫回来。
         //
@@ -624,7 +624,7 @@ static ::winrt::TufScreenControl::implementation::MainWindow* s_current = nullpt
             // WinUI 默认生命周期：先摘掉电源/会话事件监听，再优雅停播放器
             // （请求停止 → join 工作线程 → 关闭 HID 句柄），
             // 最后一个窗口关闭后框架结束消息循环，进程正常退出。
-            m_powerMonitor.Stop();
+            m_deviceWatcher.Stop();
             ShutdownPlayer();
             DetachPageUi();
         });

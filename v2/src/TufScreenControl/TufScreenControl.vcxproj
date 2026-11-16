@@ -139,7 +139,7 @@
       <DependentUpon>SettingsPage.xaml</DependentUpon>
     </ClInclude>
     <ClInclude Include="NativeTheme.h" />
-    <ClInclude Include="PowerMonitor.h" />
+    <ClInclude Include="DeviceWatcher.h" />
     <ClInclude Include="TrayIcon.h" />
     <ClInclude Include="UiHelpers.h" />
     <ClInclude Include="FirmwareUpdater.h" />
@@ -167,7 +167,7 @@
       <DependentUpon>SettingsPage.xaml</DependentUpon>
     </ClCompile>
     <ClCompile Include="NativeTheme.cpp" />
-    <ClCompile Include="PowerMonitor.cpp" />
+    <ClCompile Include="DeviceWatcher.cpp" />
     <ClCompile Include="TrayIcon.cpp" />
     <ClCompile Include="UiHelpers.cpp" />
     <ClCompile Include="$(GeneratedFilesDir)module.g.cpp" />

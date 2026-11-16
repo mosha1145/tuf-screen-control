@@ -233,26 +233,6 @@ namespace TufScreenControl::Core
         return repoRoot.empty() ? std::filesystem::path{} : repoRoot / L"assets";
     }
 
-    std::wstring ConfigStore::ResolveMediaPath(std::wstring const& stored,
-                                               std::filesystem::path const& legacyRoot)
-    {
-        if (stored.empty())
-        {
-            return {};
-        }
-        std::filesystem::path p(stored);
-        if (p.is_absolute())
-        {
-            return stored;   // 外部文件：原样保留
-        }
-        // v1 存的是相对仓库根的路径，配置基目录变了以后必须重定位成绝对路径。
-        if (legacyRoot.empty())
-        {
-            return stored;
-        }
-        return (legacyRoot / p).lexically_normal().wstring();
-    }
-
     bool ConfigStore::Load()
     {
         std::error_code ec;
@@ -291,18 +271,6 @@ namespace TufScreenControl::Core
 
         ApplyJson(root);
 
-        // 关键一步：v1 的素材路径是相对仓库根的，配置基目录变了就会失效，
-        // 因此迁移时统一重定位为绝对路径。
-        const std::filesystem::path legacyRoot = legacyPath.parent_path();
-        if (!m_config.photoPath.empty())
-        {
-            m_config.photoPath = ResolveMediaPath(m_config.photoPath, legacyRoot);
-        }
-        if (!m_config.videoPath.empty())
-        {
-            m_config.videoPath = ResolveMediaPath(m_config.videoPath, legacyRoot);
-        }
-
         // 注意：绝不删除/修改 v1 的 config.json —— 用户可随时回退到 v1。
         Save();
         return true;
@@ -315,14 +283,7 @@ namespace TufScreenControl::Core
         m_config.brightness = root[L"brightness"].AsInt(m_config.brightness);
         m_config.fitMode = root[L"fit_mode"].AsString(m_config.fitMode);
         m_config.rotation = root[L"rotation"].AsInt(m_config.rotation);
-
-        m_config.displayType = root[L"display_type"].AsString(m_config.displayType);
-        m_config.photoPath = root[L"photo_path"].AsString(m_config.photoPath);
-        m_config.videoPath = root[L"video_path"].AsString(m_config.videoPath);
-        m_config.playbackMode = root[L"playback_mode"].AsString(m_config.playbackMode);
-
         m_config.photoFps = root[L"photo_fps"].AsDouble(m_config.photoFps);
-        m_config.videoQuality = root[L"video_quality"].AsString(m_config.videoQuality);
 
         m_config.autoStart = root[L"auto_start"].AsBool(m_config.autoStart);
         m_config.closeAction = ToLower(root[L"close_action"].AsString(m_config.closeAction));
@@ -330,29 +291,12 @@ namespace TufScreenControl::Core
         m_config.appTheme = ToLower(root[L"app_theme"].AsString(m_config.appTheme));
         m_config.themeColor = ToLower(root[L"theme_color"].AsString(m_config.themeColor));
 
-        m_config.powerActions = root[L"power_actions"].AsBool(m_config.powerActions);
-        m_config.powerCloseApp = root[L"power_close_app"].AsBool(m_config.powerCloseApp);
-        m_config.powerShutdown = root[L"power_shutdown"].AsBool(m_config.powerShutdown);
-        m_config.powerLogout = root[L"power_logout"].AsBool(m_config.powerLogout);
-        m_config.powerSleep = root[L"power_sleep"].AsBool(m_config.powerSleep);
         m_config.sleepMode = root[L"sleep_mode"].AsBool(m_config.sleepMode);
         m_config.autoCheckUpdate = root[L"auto_check_update"].AsBool(m_config.autoCheckUpdate);
         m_config.updateFrequency = root[L"update_frequency"].AsString(m_config.updateFrequency);
         m_config.lastUpdateCheckUnix =
             static_cast<long long>(root[L"last_update_check"].AsDouble(
                 static_cast<double>(m_config.lastUpdateCheckUnix)));
-
-        // v1 曾有过 overlay_type == "hwinfo"（硬件信息叠加，已移除），归一到 none。
-        std::wstring overlay = ToLower(root[L"overlay_type"].AsString(m_config.overlayType));
-        if (overlay == L"hwinfo")
-        {
-            overlay = L"none";
-        }
-        m_config.overlayType = overlay;
-        m_config.clockStyle = ToLower(root[L"clock_style"].AsString(m_config.clockStyle));
-
-        m_config.smtcFilterMode = root[L"smtc_filter_mode"].AsString(m_config.smtcFilterMode);
-        m_config.smtcFilterApps = root[L"smtc_filter_apps"].AsStringArray();
 
         m_config.schemaVersion = root[L"schema_version"].AsInt(m_config.schemaVersion);
     }
@@ -371,41 +315,18 @@ namespace TufScreenControl::Core
         out << "  \"schema_version\": " << m_config.schemaVersion << ",\n";
         out << "  \"screen_on\": " << (m_config.screenOn ? "true" : "false") << ",\n";
         out << "  \"brightness\": " << m_config.brightness << ",\n";
-        out << "  \"display_type\": \"" << JsonEscape(NarrowUtf8(m_config.displayType)) << "\",\n";
-        out << "  \"photo_path\": " << (m_config.photoPath.empty()
-                                           ? "null"
-                                           : "\"" + JsonEscape(NarrowUtf8(m_config.photoPath)) + "\"") << ",\n";
-        out << "  \"video_path\": " << (m_config.videoPath.empty()
-                                           ? "null"
-                                           : "\"" + JsonEscape(NarrowUtf8(m_config.videoPath)) + "\"") << ",\n";
         out << "  \"fit_mode\": \"" << JsonEscape(NarrowUtf8(m_config.fitMode)) << "\",\n";
         out << "  \"photo_fps\": " << m_config.photoFps << ",\n";
-        out << "  \"video_quality\": \"" << JsonEscape(NarrowUtf8(m_config.videoQuality)) << "\",\n";
         out << "  \"rotation\": " << m_config.rotation << ",\n";
-        out << "  \"playback_mode\": \"" << JsonEscape(NarrowUtf8(m_config.playbackMode)) << "\",\n";
         out << "  \"auto_start\": " << (m_config.autoStart ? "true" : "false") << ",\n";
         out << "  \"app_theme\": \"" << JsonEscape(NarrowUtf8(m_config.appTheme)) << "\",\n";
-    out << "  \"theme_color\": \"" << JsonEscape(NarrowUtf8(m_config.themeColor)) << "\",\n";
-    out << "  \"close_action\": \"" << JsonEscape(NarrowUtf8(m_config.closeAction)) << "\",\n";
-    out << "  \"close_prompt_shown\": " << (m_config.closePromptShown ? "true" : "false") << ",\n";
-    out << "  \"power_actions\": " << (m_config.powerActions ? "true" : "false") << ",\n";
-        out << "  \"power_close_app\": " << (m_config.powerCloseApp ? "true" : "false") << ",\n";
-        out << "  \"power_shutdown\": " << (m_config.powerShutdown ? "true" : "false") << ",\n";
-        out << "  \"power_logout\": " << (m_config.powerLogout ? "true" : "false") << ",\n";
-        out << "  \"power_sleep\": " << (m_config.powerSleep ? "true" : "false") << ",\n";
-    out << "  \"sleep_mode\": " << (m_config.sleepMode ? "true" : "false") << ",\n";
+        out << "  \"theme_color\": \"" << JsonEscape(NarrowUtf8(m_config.themeColor)) << "\",\n";
+        out << "  \"close_action\": \"" << JsonEscape(NarrowUtf8(m_config.closeAction)) << "\",\n";
+        out << "  \"close_prompt_shown\": " << (m_config.closePromptShown ? "true" : "false") << ",\n";
+        out << "  \"sleep_mode\": " << (m_config.sleepMode ? "true" : "false") << ",\n";
         out << "  \"auto_check_update\": " << (m_config.autoCheckUpdate ? "true" : "false") << ",\n";
         out << "  \"update_frequency\": \"" << JsonEscape(NarrowUtf8(m_config.updateFrequency)) << "\",\n";
-        out << "  \"last_update_check\": " << m_config.lastUpdateCheckUnix << ",\n";
-        out << "  \"overlay_type\": \"" << JsonEscape(NarrowUtf8(m_config.overlayType)) << "\",\n";
-        out << "  \"clock_style\": \"" << JsonEscape(NarrowUtf8(m_config.clockStyle)) << "\",\n";
-        out << "  \"smtc_filter_mode\": \"" << JsonEscape(NarrowUtf8(m_config.smtcFilterMode)) << "\",\n";
-        out << "  \"smtc_filter_apps\": [";
-        for (std::size_t i = 0; i < m_config.smtcFilterApps.size(); ++i)
-        {
-            out << (i ? ", " : "") << "\"" << JsonEscape(NarrowUtf8(m_config.smtcFilterApps[i])) << "\"";
-        }
-        out << "]\n";
+        out << "  \"last_update_check\": " << m_config.lastUpdateCheckUnix << "\n";
         out << "}\n";
 
         // 原子写：先写临时文件，再替换目标，避免崩溃留下半截 JSON（v1 的隐患）。

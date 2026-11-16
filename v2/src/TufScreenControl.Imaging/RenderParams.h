@@ -31,38 +31,11 @@ namespace TufScreenControl::Imaging
         Deg270 = 270,
     };
 
-    /// 覆盖层类型（本期只做 none / clock / text，不含硬件信息）。
-    enum class OverlayType
-    {
-        None,
-        Clock,
-        CustomText,
-    };
-
-    /// 文本条目：位置用 0..1 的比例表示，与分辨率解耦（沿用 v1 约定）。
-    struct TextItem
-    {
-        // 注：`text` 指向 UTF-8 字面量，生命周期由调用方保证。
-        const char* text = "";
-        float x = 0.5f;        ///< 0..1
-        float y = 0.5f;        ///< 0..1
-        float alpha = 0.6f;    ///< 底色透明度
-        float scale = 0.6f;    ///< 字号
-        int thickness = 1;     ///< 粗细
-        std::uint8_t color[3]{};  ///< BGR（协议要求 BGR，勿交换）
-        std::uint8_t background[3]{};
-    };
-
     /// 渲染参数快照。
     struct RenderParams
     {
         FitMode fitMode = FitMode::Contain;
         Rotation rotation = Rotation::Deg270;   ///< 实测默认 270° 适配多数安装方向
         std::uint8_t jpegQuality = 60;          ///< 视频建议 50-60，静态图可用 95
-        bool screenEnabled = true;              ///< 对应 v1 config.screen_on
-
-        OverlayType overlayType = OverlayType::None;
-        bool analogClock = false;
-        TextItem clockText{};
     };
 }

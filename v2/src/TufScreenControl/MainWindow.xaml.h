@@ -8,7 +8,7 @@
 
 #include "MainWindow.g.h"
 #include "NativeTheme.h"
-#include "PowerMonitor.h"
+#include "DeviceWatcher.h"
 #include "TrayIcon.h"
 
 #include <memory>
@@ -95,7 +95,7 @@ namespace winrt::TufScreenControl::implementation
         /// 上一帧是否还在渲染，未完成则丢弃新帧，避免异步任务积压
         bool m_previewPending = false;
         std::wstring m_currentTag{ L"" };
-        ::TufScreenControl::PowerMonitor m_powerMonitor;
+        ::TufScreenControl::DeviceWatcher m_deviceWatcher;
         ::TufScreenControl::TrayIcon m_trayIcon;
 
         bool m_trayAvailable = false;
