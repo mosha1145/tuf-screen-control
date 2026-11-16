@@ -39,12 +39,7 @@ namespace TufScreenControl::Core::Json
         std::vector<Value> items;
         std::map<std::wstring, Value> members;
 
-        bool IsNull() const noexcept { return type == Type::Null; }
         bool IsObject() const noexcept { return type == Type::Object; }
-        bool IsArray() const noexcept { return type == Type::Array; }
-        bool IsNumber() const noexcept { return type == Type::Number; }
-        bool IsString() const noexcept { return type == Type::String; }
-        bool IsBool() const noexcept { return type == Type::Bool; }
 
         /// 取成员；不存在时返回一个静态的 Null 值。
         Value const& operator[](std::wstring const& key) const;

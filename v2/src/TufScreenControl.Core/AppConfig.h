@@ -98,9 +98,6 @@ namespace TufScreenControl::Core
         AppConfig& Data() noexcept { return m_config; }
         AppConfig const& Data() const noexcept { return m_config; }
 
-        /// 当前配置文件的完整路径。
-        std::filesystem::path const& Path() const noexcept { return m_path; }
-
         /// 素材库根目录（v2 仍指向仓库内的 assets\，素材是用户数据不搬走）。
         std::filesystem::path AssetRoot() const;
 

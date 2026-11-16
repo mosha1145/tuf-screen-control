@@ -75,7 +75,6 @@ namespace TufScreenControl::Core
         /// 只置停止标志、不等待工作线程：用于进程退出路径，避免卡在 join 上。
         void RequestStop() noexcept;
 
-        bool IsPlaying() const noexcept { return m_playing.load(); }
 
         /// 暂停/继续。暂停期间仍会以低频重发最后一帧，避免设备回落到自带动画。
         void SetPaused(bool paused) noexcept { m_paused.store(paused); }
