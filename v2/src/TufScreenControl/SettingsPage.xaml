@@ -20,8 +20,14 @@
         <!--
             分组结构（关键）：
             根 StackPanel 的每个子元素 = 一个「分组整体」（标题 + 若干卡片）。
-            官方行为：Expander 展开时自己会把下方 UI 推开（见 Expander 文档），
-            但 Expander 只做 0.167s 的内容滑入、不动高度，所以栏间位移仍需 RepositionThemeTransition 驱动。
+
+            动画全部使用框架内置的主题过渡，没有任何自写动画、也没有自定义时长：
+              · ScrollViewer.Transitions 里的 EntranceThemeTransition：页面首次进入时的入场动画；
+              · StackPanel.ChildrenTransitions 里的 RepositionThemeTransition：兄弟元素因为
+                布局变化而位移时，由框架负责补间。
+            Expander 内置的展开/收起动画只作用于它自己的内容（对内容做位移 + 切
+            Visibility），不会补间外层布局的高度变化；因此展开/收起时下方分组的位移，
+            要由 ChildrenTransitions 里的 RepositionThemeTransition 来表现。
         -->
         <StackPanel Margin="24,8,24,24" Spacing="0">
 
